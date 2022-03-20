@@ -1,15 +1,26 @@
 import unittest
 
+import jax.numpy as jnp
+
+import go
+
 
 class GoTest(unittest.TestCase):
-    def test_init_state_squeeze_default(self):
-        self.assertEqual(True, False)  # add assertion here
+    def test_new_state_default_squeeze_shape(self):
+        state = go.new_state(4)
+        self.assertEqual(state.shape, (6, 4, 4))
 
-    def test_init_state_unsqueeze_single(self):
-        self.assertEqual(True, False)  # add assertion here
+    def test_new_state_all_zeros(self):
+        state = go.new_state(4)
+        self.assertTrue(jnp.all(state == 0))
 
-    def test_init_state_batch(self):
-        self.assertEqual(True, False)  # add assertion here
+    def test_new_state_nosqueeze_shape(self):
+        state = go.new_state(4, squeeze=False)
+        self.assertEqual(state.shape, (1, 6, 4, 4))
+
+    def test_new_state_batch_shape(self):
+        state = go.new_state(4, batch_size=2)
+        self.assertEqual(state.shape, (2, 6, 4, 4))
 
     def test_black_moves_first(self):
         self.assertEqual(True, False)  # add assertion here

@@ -22,7 +22,7 @@ class GoTest(unittest.TestCase):
     def test_to_indicator_actions_pass(self):
         self.assertEqual(True, False)  # add assertion here
 
-    def test_to_indicator_actions_move(self):
+    def test_to_indicator_actions_black_move(self):
         state = go.new_states(2)
         indicator_actions = go.to_indicator_actions([(0, 0)], state)
         self.assertTrue(jnp.all(lax.eq(indicator_actions, jnp.array([[[[True, False],
@@ -38,11 +38,30 @@ class GoTest(unittest.TestCase):
                                                                       [[False, False],
                                                                        [False, False]]]]))))
 
+    def test_to_indicator_actions_white_move(self):
+        state = go.new_states(2)
+        state = state.at[0, 2].set(True)
+        indicator_actions = go.to_indicator_actions([(0, 0)], state)
+        self.assertTrue(jnp.all(lax.eq(indicator_actions, jnp.array([[[[False, False],
+                                                                       [False, False]],
+                                                                      [[True, False],
+                                                                       [False, False]],
+                                                                      [[False, False],
+                                                                       [False, False]],
+                                                                      [[False, False],
+                                                                       [False, False]],
+                                                                      [[False, False],
+                                                                       [False, False]],
+                                                                      [[False, False],
+                                                                       [False, False]]]]))))
+
     def test_to_indicator_actions_pass_and_move(self):
         self.assertEqual(True, False)  # add assertion here
 
     def test_get_turns(self):
-        self.assertEqual(True, False)  # add assertion here
+        states = go.new_states(2, batch_size=2)
+        states = states.at[0, 2].set(True)
+        self.assertEqual(go.get_turns(states), [True, False])
 
     def test_white_moves_second(self):
         state = go.new_states(4)

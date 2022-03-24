@@ -1,32 +1,53 @@
 import unittest
 
 import jax.numpy as jnp
+from jax import lax
 
 import go
 
 
 class GoTest(unittest.TestCase):
-    def test_new_state_default_squeeze_shape(self):
-        state = go.new_state(4)
-        self.assertEqual(state.shape, (6, 4, 4))
-
-    def test_new_state_all_zeros(self):
-        state = go.new_state(4)
-        self.assertTrue(jnp.all(state == 0))
-
-    def test_new_state_nosqueeze_shape(self):
-        state = go.new_state(4, squeeze=False)
+    def test_new_state_default_single_batch_size(self):
+        state = go.new_states(4)
         self.assertEqual(state.shape, (1, 6, 4, 4))
 
-    def test_new_state_batch_shape(self):
-        state = go.new_state(4, batch_size=2)
+    def test_new_state_all_zeros(self):
+        state = go.new_states(4)
+        self.assertTrue(jnp.all(state == 0))
+
+    def test_new_state_batch_size_two(self):
+        state = go.new_states(4, batch_size=2)
         self.assertEqual(state.shape, (2, 6, 4, 4))
 
-    def test_black_moves_first(self):
+    def test_to_indicator_actions_pass(self):
+        self.assertEqual(True, False)  # add assertion here
+
+    def test_to_indicator_actions_move(self):
+        state = go.new_states(2)
+        indicator_actions = go.to_indicator_actions([(0, 0)], state)
+        self.assertTrue(jnp.all(lax.eq(indicator_actions, jnp.array([[[[True, False],
+                                                                       [False, False]],
+                                                                      [[False, False],
+                                                                       [False, False]],
+                                                                      [[False, False],
+                                                                       [False, False]],
+                                                                      [[False, False],
+                                                                       [False, False]],
+                                                                      [[False, False],
+                                                                       [False, False]],
+                                                                      [[False, False],
+                                                                       [False, False]]]]))))
+
+    def test_to_indicator_actions_pass_and_move(self):
+        self.assertEqual(True, False)  # add assertion here
+
+    def test_get_turns(self):
         self.assertEqual(True, False)  # add assertion here
 
     def test_white_moves_second(self):
-        self.assertEqual(True, False)  # add assertion here
+        state = go.new_states(4)
+        state = go.next_states(state, go.to_indicator_actions([(0, 0)], state))
+        self.assertTrue(jnp.all(state[0, 2]))
 
     def test_black_and_white_moves_in_batch(self):
         self.assertEqual(True, False)  # add assertion here

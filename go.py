@@ -26,6 +26,7 @@ def next_states(states, indicator_actions):
     next_states = lax.max(states, indicator_actions)
     return next_states.at[:, 2].set(True)
 
+
 def to_indicator_actions(actions, states):
     """
     :param actions: A list of actions. Each element is either pass (None), or a tuple of integers representing a row, column coordinate.
@@ -40,10 +41,10 @@ def to_indicator_actions(actions, states):
         indicator_actions = indicator_actions.at[i, jnp.int8(turn), action[0], action[1]].set(True)
     return indicator_actions
 
+
 def get_turns(states):
     """
     :param states:
     :return: A boolean list indicating whose turn it is for each state
     """
     return list(map(lambda s: jnp.all(s[2] == 1), states))
-

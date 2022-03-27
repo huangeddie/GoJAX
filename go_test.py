@@ -77,11 +77,22 @@ class GoTest(unittest.TestCase):
     def test_two_consecutive_passes_ends_game(self):
         self.assertEqual(True, False)  # add assertion here
 
-    def test_invalid_move_space_occupied_by_own_pieces(self):
-        self.assertEqual(True, False)  # add assertion here
-
     def test_invalid_move_space_occupied_by_opponent_pieces(self):
-        self.assertEqual(True, False)  # add assertion here
+        state = go.new_states(2)
+        state = go.new_states(state, go.to_indicator_actions([(0, 0)], state))
+        self.assertEqual(go.get_turns(state), [True])
+        next_state = go.new_states(state, go.to_indicator_actions([(0, 0)], state))
+        # Invalid moves don't change the state
+        self.assertTrue(jnp.all(lax.eq(next_state, state)))
+
+    def test_invalid_move_space_occupied_by_own_pieces(self):
+        state = go.new_states(2)
+        state = go.new_states(state, go.to_indicator_actions([(0, 0)], state))
+        state = go.new_states(state, go.to_indicator_actions([None], state))
+        self.assertEqual(go.get_turns(state), [False])
+        next_state = go.new_states(state, go.to_indicator_actions([(0, 0)], state))
+        # Invalid moves don't change the state
+        self.assertTrue(jnp.all(lax.eq(next_state, state)))
 
     def test_invalid_move_no_liberties(self):
         self.assertEqual(True, False)  # add assertion here

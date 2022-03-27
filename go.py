@@ -26,8 +26,8 @@ def next_states(states, indicator_actions):
     in the batch, there should be at most one non-zero element representing the move. If all elements are 0,
     then it's considered a pass. :return: The next states of the board
     """
-    next_states = lax.max(states, indicator_actions)
-    return next_states.at[:, 2].set(True)
+    next_states_ = lax.max(states, indicator_actions)
+    return next_states_.at[:, 2].set(True)
 
 
 def to_indicator_actions(actions, states):
@@ -51,3 +51,20 @@ def get_turns(states):
     :return: A boolean list indicating whose turn it is for each state
     """
     return list(map(lambda s: jnp.all(s[2] == 1), states))
+
+
+def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed: bool = False, komi=None):
+    """
+    Creates a game board from the human-readable encoded string.
+    :param encode_str:
+    :param turn:
+    :param passed:
+    :param komi:
+    :return:
+    """
+    if encode_str[0] == '\n':
+        encode_str = encode_str[1:]
+    board_size = len(encode_str.splitlines()[0].split())
+    state = new_states(board_size)
+
+    return state

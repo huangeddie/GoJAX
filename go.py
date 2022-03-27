@@ -22,12 +22,25 @@ def new_states(board_size, batch_size=1):
 def next_states(states, indicator_actions):
     """
     :param states:
-    :param indicator_actions: A sparse array of the same shape that represents the new actions. For each state
+    :param indicator_actions: A sparse array of the same shape as states that represents the new actions. For each state
     in the batch, there should be at most one non-zero element representing the move. If all elements are 0,
     then it's considered a pass. :return: The next states of the board
     """
-    next_states_ = lax.max(states, indicator_actions)
-    return next_states_.at[:, 2].set(True)
+    states = lax.max(states, indicator_actions)
+    # Change the turn
+    states = states.at[:, go_constants.TURN_CHANNEL_INDEX].set(~states[:, go_constants.TURN_CHANNEL_INDEX])
+
+    # Get passed states
+    previously_passed = states[:, go_constants.PASS_CHANNEL_INDEX]
+    passed = jnp.alltrue(lax.eq(indicator_actions, jnp.zeros_like(indicator_actions)), axis=(1, 2, 3))
+
+    # Set pass
+    states = states.at[:, go_constants.PASS_CHANNEL_INDEX].set(passed)
+
+    # Set game ended
+    states = states.at[:, go_constants.END_CHANNEL_INDEX].set(previously_passed & passed)
+
+    return states
 
 
 def to_indicator_actions(actions, states):
@@ -64,7 +77,27 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
     """
     if encode_str[0] == '\n':
         encode_str = encode_str[1:]
-    board_size = len(encode_str.splitlines()[0].split())
-    state = new_states(board_size)
+    if encode_str[-1] == '\n':
+        encode_str = encode_str[:-1]
+    lines = encode_str.splitlines()
+    board_size = len(lines)
+    state = new_states(board_size, batch_size=1)
+    for i, line in enumerate(lines):
+        for j, char in enumerate(line.split()):
+            if char == 'B':
+                state = state.at[0, go_constants.BLACK_CHANNEL_INDEX, i, j].set(True)
+            elif char == 'W':
+                state = state.at[0, go_constants.WHITE_CHANNEL_INDEX, i, j].set(True)
+
+    # Set the turn
+    state = state.at[0, go_constants.TURN_CHANNEL_INDEX].set(turn)
+
+    # TODO: Set the invalid channel
+    state = state.at[0, go_constants.INVALID_CHANNEL_INDEX].set(
+        jnp.zeros_like(state[0, go_constants.INVALID_CHANNEL_INDEX]))
+
+    # Set if passed
+    if passed:
+        state = state.at[0, go_constants.PASS_CHANNEL_INDEX].set(True)
 
     return state

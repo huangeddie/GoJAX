@@ -63,18 +63,18 @@ class GoTest(unittest.TestCase):
         states = go.new_states(2, batch_size=2)
         indicator_moves = go.to_indicator_actions([None, (0, 0)], states)
         self.assertTrue(jnp.alltrue(lax.eq(indicator_moves[0], jnp.zeros_like(indicator_moves[0]))))
-        self.assertEqual(jnp.alltrue(lax.eq(indicator_moves[1], jnp.array([[[[True, False],
-                                                                             [False, False]],
-                                                                            [[False, False],
-                                                                             [False, False]],
-                                                                            [[False, False],
-                                                                             [False, False]],
-                                                                            [[False, False],
-                                                                             [False, False]],
-                                                                            [[False, False],
-                                                                             [False, False]],
-                                                                            [[False, False],
-                                                                             [False, False]]]]))))
+        self.assertTrue(jnp.alltrue(lax.eq(indicator_moves[1], jnp.array([[[True, False],
+                                                                           [False, False]],
+                                                                          [[False, False],
+                                                                           [False, False]],
+                                                                          [[False, False],
+                                                                           [False, False]],
+                                                                          [[False, False],
+                                                                           [False, False]],
+                                                                          [[False, False],
+                                                                           [False, False]],
+                                                                          [[False, False],
+                                                                           [False, False]]]))))
 
     def test_get_turns(self):
         states = go.new_states(2, batch_size=2)
@@ -84,7 +84,14 @@ class GoTest(unittest.TestCase):
     def test_white_moves_second(self):
         state = go.new_states(4)
         state = go.next_states(state, go.to_indicator_actions([(0, 0)], state))
-        self.assertTrue(jnp.alltrue(state[0, 2]))
+        self.assertTrue(jnp.alltrue(state[0, gc.TURN_CHANNEL_INDEX]))
+
+    def test_black_moves_third(self):
+        state = go.new_states(4)
+        state = go.next_states(state, go.to_indicator_actions([None], state))
+        state = go.next_states(state, go.to_indicator_actions([None], state))
+        self.assertTrue(
+            jnp.alltrue(lax.eq(state[0, gc.TURN_CHANNEL_INDEX], jnp.zeros_like(state[0, gc.TURN_CHANNEL_INDEX]))))
 
     def test_black_and_white_moves_in_batch(self):
         states = go.new_states(2, batch_size=2)
@@ -102,18 +109,19 @@ class GoTest(unittest.TestCase):
     def test_pass_sets_pass_layer(self):
         state = go.new_states(2)
         state = go.next_states(state, go.to_indicator_actions([None], state))
-        self.assertTrue(jnp.alltrue(lax.eq(state[gc.PASS_CHANNEL_INDEX]), jnp.ones_like(state[4])))
+        self.assertTrue(
+            jnp.alltrue(lax.eq(state[0, gc.PASS_CHANNEL_INDEX], jnp.ones_like(state[0, gc.PASS_CHANNEL_INDEX]))))
 
     def test_two_consecutive_passes_ends_game(self):
         state = go.new_states(2)
-        self.assertTrue(jnp.alltrue(lax.eq(state[gc.END_CHANNEL_INDEX]),
-                                    jnp.zeros_like(state[gc.END_CHANNEL_INDEX])))
+        self.assertTrue(jnp.alltrue(lax.eq(state[0, gc.END_CHANNEL_INDEX],
+                                           jnp.zeros_like(state[0, gc.END_CHANNEL_INDEX]))))
         state = go.next_states(state, go.to_indicator_actions([None], state))
-        self.assertTrue(jnp.alltrue(lax.eq(state[gc.END_CHANNEL_INDEX]),
-                                    jnp.zeros_like(state[gc.END_CHANNEL_INDEX])))
+        self.assertTrue(jnp.alltrue(lax.eq(state[0, gc.END_CHANNEL_INDEX],
+                                           jnp.zeros_like(state[0, gc.END_CHANNEL_INDEX]))))
         state = go.next_states(state, go.to_indicator_actions([None], state))
-        self.assertTrue(jnp.alltrue(lax.eq(state[gc.END_CHANNEL_INDEX]),
-                                    jnp.ones_like(state[gc.END_CHANNEL_INDEX])))
+        self.assertTrue(jnp.alltrue(lax.eq(state[0, gc.END_CHANNEL_INDEX],
+                                           jnp.ones_like(state[0, gc.END_CHANNEL_INDEX]))))
 
     def test_invalid_move_space_occupied_by_opponent_pieces(self):
         state = go.new_states(2)
@@ -151,7 +159,7 @@ class GoTest(unittest.TestCase):
                     """
         state = go.decode_state(state_str, gc.WHITES_TURN)
         self.assertTrue(jnp.alltrue(
-            lax.eq(state[gc.TURN_CHANNEL_INDEX], jnp.ones_like(state[gc.TURN_CHANNEL_INDEX]))))
+            lax.eq(state[0, gc.TURN_CHANNEL_INDEX], jnp.ones_like(state[0, gc.TURN_CHANNEL_INDEX]))))
 
     def test_decode_state_one_piece(self):
         state_str = """
@@ -161,7 +169,7 @@ class GoTest(unittest.TestCase):
                     _ _ _ _
                     """
         state = go.decode_state(state_str)
-        self.assertTrue(state[gc.BLACK_CHANNEL_INDEX, 0, 0])
+        self.assertTrue(state[0, gc.BLACK_CHANNEL_INDEX, 0, 0])
 
     def test_decode_state_two_pieces(self):
         state_str = """
@@ -171,8 +179,8 @@ class GoTest(unittest.TestCase):
                     _ _ _ W
                     """
         state = go.decode_state(state_str)
-        self.assertTrue(state[gc.BLACK_CHANNEL_INDEX, 0, 0])
-        self.assertTrue(state[gc.WHITE_CHANNEL_INDEX, 3, 3])
+        self.assertTrue(state[0, gc.BLACK_CHANNEL_INDEX, 0, 0])
+        self.assertTrue(state[0, gc.WHITE_CHANNEL_INDEX, 3, 3])
 
     def test_decode_state_pass(self):
         state_str = """
@@ -182,7 +190,8 @@ class GoTest(unittest.TestCase):
                     _ _ _ _
                     """
         state = go.decode_state(state_str, passed=True)
-        self.assertTrue(jnp.alltrue(lax.eq(state[gc.PASS_CHANNEL_INDEX], jnp.ones_like(state[gc.PASS_CHANNEL_INDEX]))))
+        self.assertTrue(
+            jnp.alltrue(lax.eq(state[0, gc.PASS_CHANNEL_INDEX], jnp.ones_like(state[0, gc.PASS_CHANNEL_INDEX]))))
 
     def test_invalid_move_single_hole_no_liberties(self):
         state_str = """

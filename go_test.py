@@ -4,12 +4,13 @@ import jax.numpy as jnp
 from jax import lax
 
 import go
+import go_constants
 
 
 class GoTest(unittest.TestCase):
     def test_new_state_default_single_batch_size(self):
         state = go.new_states(4)
-        self.assertEqual(state.shape, (1, 6, 4, 4))
+        self.assertEqual(state.shape, (1, go_constants.NUM_CHANNELS, 4, 4))
 
     def test_new_state_all_zeros(self):
         state = go.new_states(4)
@@ -17,7 +18,7 @@ class GoTest(unittest.TestCase):
 
     def test_new_state_batch_size_two(self):
         state = go.new_states(4, batch_size=2)
-        self.assertEqual(state.shape, (2, 6, 4, 4))
+        self.assertEqual(state.shape, (2, go_constants.NUM_CHANNELS, 4, 4))
 
     def test_to_indicator_actions_pass(self):
         state = go.new_states(2)
@@ -100,15 +101,18 @@ class GoTest(unittest.TestCase):
     def test_pass_sets_pass_layer(self):
         state = go.new_states(2)
         state = go.next_states(state, go.to_indicator_actions([None], state))
-        self.assertTrue(jnp.alltrue(lax.eq(state[4]), jnp.ones_like(state[4])))
+        self.assertTrue(jnp.alltrue(lax.eq(state[go_constants.PASS_CHANNEL_INDEX]), jnp.ones_like(state[4])))
 
     def test_two_consecutive_passes_ends_game(self):
         state = go.new_states(2)
-        self.assertTrue(jnp.alltrue(lax.eq(state[5]), jnp.zeros_like(state[5])))
+        self.assertTrue(jnp.alltrue(lax.eq(state[go_constants.END_CHANNEL_INDEX]),
+                                    jnp.zeros_like(state[go_constants.END_CHANNEL_INDEX])))
         state = go.next_states(state, go.to_indicator_actions([None], state))
-        self.assertTrue(jnp.alltrue(lax.eq(state[5]), jnp.zeros_like(state[5])))
+        self.assertTrue(jnp.alltrue(lax.eq(state[go_constants.END_CHANNEL_INDEX]),
+                                    jnp.zeros_like(state[go_constants.END_CHANNEL_INDEX])))
         state = go.next_states(state, go.to_indicator_actions([None], state))
-        self.assertTrue(jnp.alltrue(lax.eq(state[5]), jnp.ones_like(state[5])))
+        self.assertTrue(jnp.alltrue(lax.eq(state[go_constants.END_CHANNEL_INDEX]),
+                                    jnp.ones_like(state[go_constants.END_CHANNEL_INDEX])))
 
     def test_invalid_move_space_occupied_by_opponent_pieces(self):
         state = go.new_states(2)

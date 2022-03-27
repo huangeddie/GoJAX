@@ -1,7 +1,10 @@
-import jax.numpy as jnp
-from jax import lax
-from jax import jit
 from functools import partial
+
+import jax.numpy as jnp
+from jax import jit
+from jax import lax
+
+import go_constants
 
 
 @partial(jit, static_argnums=[0, 1, 2])
@@ -11,7 +14,7 @@ def new_states(board_size, batch_size=1):
     :param batch_size:
     :return: Generates new JAX array representing new Go game
     """
-    state = jnp.zeros((batch_size, 6, board_size, board_size), dtype=bool)
+    state = jnp.zeros((batch_size, go_constants.NUM_CHANNELS, board_size, board_size), dtype=bool)
     return state
 
 

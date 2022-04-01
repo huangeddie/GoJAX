@@ -22,17 +22,17 @@ def new_states(board_size, batch_size=1):
 def next_states(states, indicator_actions):
     """
     :param states:
-    :param indicator_actions: A sparse array of the same shape as states that represents the new actions. For each state
+    :param indicator_actions: A (N x B x B) sparse array of the same shape as states that represents the new actions. For each state
     in the batch, there should be at most one non-zero element representing the move. If all elements are 0,
     then it's considered a pass. :return: The next states of the board
     """
-    states = lax.max(states, indicator_actions)
+    states = states.at[jnp.arange(states.shape[0]), jnp.array(get_turns(states), dtype=int)].max(indicator_actions)
     # Change the turn
     states = states.at[:, go_constants.TURN_CHANNEL_INDEX].set(~states[:, go_constants.TURN_CHANNEL_INDEX])
 
     # Get passed states
     previously_passed = states[:, go_constants.PASS_CHANNEL_INDEX]
-    passed = jnp.alltrue(lax.eq(indicator_actions, jnp.zeros_like(indicator_actions)), axis=(1, 2, 3))
+    passed = jnp.alltrue(lax.eq(indicator_actions, jnp.zeros_like(indicator_actions)), axis=(1, 2))
 
     # Set pass
     states = states.at[:, go_constants.PASS_CHANNEL_INDEX].set(passed)
@@ -47,14 +47,14 @@ def to_indicator_actions(actions, states):
     """
     :param actions: A list of actions. Each element is either pass (None), or a tuple of integers representing a row, column coordinate.
     :param states: The corresponding list of states.
-    :return: A sparse array representing indicator actions for each state.
+    :return: A (N x B x B) sparse array representing indicator actions for each state.
     """
     turns = get_turns(states)
-    indicator_actions = jnp.zeros_like(states)
+    indicator_actions = jnp.zeros((states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
     for i, (action, turn) in enumerate(zip(actions, turns)):
         if action is None:
             continue
-        indicator_actions = indicator_actions.at[i, jnp.int8(turn), action[0], action[1]].set(True)
+        indicator_actions = indicator_actions.at[i, action[0], action[1]].set(True)
     return indicator_actions
 
 

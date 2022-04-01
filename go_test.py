@@ -46,35 +46,15 @@ class GoTest(unittest.TestCase):
         state = go.new_states(2)
         state = state.at[0, 2].set(True)
         indicator_actions = go.to_indicator_actions([(0, 0)], state)
-        self.assertTrue(jnp.alltrue(lax.eq(indicator_actions, jnp.array([[[[False, False],
-                                                                           [False, False]],
-                                                                          [[True, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]]]]))))
+        self.assertTrue(jnp.alltrue(lax.eq(indicator_actions, jnp.array([[[True, False],
+                                                                          [False, False]]]))))
 
     def test_to_indicator_actions_pass_and_move(self):
         states = go.new_states(2, batch_size=2)
         indicator_moves = go.to_indicator_actions([None, (0, 0)], states)
         self.assertTrue(jnp.alltrue(lax.eq(indicator_moves[0], jnp.zeros_like(indicator_moves[0]))))
-        self.assertTrue(jnp.alltrue(lax.eq(indicator_moves[1], jnp.array([[[True, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]]]))))
+        self.assertTrue(jnp.alltrue(lax.eq(indicator_moves[1], jnp.array([[True, False],
+                                                                          [False, False]]))))
 
     def test_get_turns(self):
         states = go.new_states(2, batch_size=2)

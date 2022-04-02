@@ -189,7 +189,7 @@ class GoTest(unittest.TestCase):
     def test_invalid_move_no_liberties_connect_to_group(self):
         state_str = """
                     B X W _
-                    W W s_ _
+                    W W _ _
                     _ _ _ _
                     _ _ _ _
                     """
@@ -203,7 +203,26 @@ class GoTest(unittest.TestCase):
         self.assertEqual(True, False)  # add assertion here
 
     def test_remove_single_piece(self):
-        self.assertEqual(True, False)  # add assertion here
+        state_str = """
+                    W _ _ _
+                    B _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str, gc.BLACKS_TURN)
+
+        next_state = go.next_states(state, go.to_indicator_actions([(0, 1)], state))
+
+        # Check that the white piece is gone and the black piece is added
+        delta_board = jnp.logical_xor(next_state[0, [0, 1]], state[0, [0, 1]])
+        # Only have two changes
+        self.assertEqual(jnp.sum(delta_board), 2)
+        # The black piece is added
+        self.assertTrue(delta_board[gc.BLACK_CHANNEL_INDEX, 0, 1])
+        self.assertTrue(next_state[0, gc.BLACK_CHANNEL_INDEX, 0, 1])
+        # White piece removed
+        self.assertTrue(delta_board[gc.WHITE_CHANNEL_INDEX, 0, 1])
+        self.assertFalse(next_state[0, gc.WHITE_CHANNEL_INDEX, 0, 0])
 
     def test_remove_two_connected_pieces(self):
         self.assertEqual(True, False)  # add assertion here

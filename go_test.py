@@ -120,6 +120,16 @@ class GoTest(unittest.TestCase):
         # Invalid moves don't change the state
         self.assertTrue(jnp.alltrue(lax.eq(next_state, state)))
 
+    def test_decode_state_shape(self):
+        state_str = """
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str)
+        self.assertEqual((1, 6, 4, 4), state.shape)
+
     def test_decode_new_state(self):
         state_str = """
                     _ _ _ _
@@ -172,6 +182,60 @@ class GoTest(unittest.TestCase):
         state = go.decode_state(state_str, passed=True)
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gc.PASS_CHANNEL_INDEX], jnp.ones_like(state[0, gc.PASS_CHANNEL_INDEX]))))
+
+    def test_free_group_shape(self):
+        state_str = """
+                    _ _
+                    _ _ 
+                    """
+        state = go.decode_state(state_str)
+        free_black_groups = go.get_free_groups(state, [gc.BLACKS_TURN])
+        self.assertEqual((1, 2, 2), free_black_groups.shape)
+
+    def test_get_free_group_free_single_piece(self):
+        state_str = """
+                    B _
+                    _ _ 
+                    """
+        state = go.decode_state(state_str)
+        free_black_groups = go.get_free_groups(state, [gc.BLACKS_TURN])
+        self.assertTrue(jnp.alltrue(jnp.array([[True, False], [False, False]]) == free_black_groups))
+
+    def test_get_free_group_non_free_single_piece(self):
+        state_str = """
+                    B W
+                    W _ 
+                    """
+        state = go.decode_state(state_str)
+        free_black_groups = go.get_free_groups(state, [gc.BLACKS_TURN])
+        self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, False]]) == free_black_groups),
+                        free_black_groups)
+
+    def test_get_free_group_free_chain(self):
+        state_str = """
+                    _ W _ _ _
+                    W B W _ _
+                    W B W _ _
+                    W B W _ _
+                    _ _ _ _ _
+                    """
+        state = go.decode_state(state_str)
+        free_black_groups = go.get_free_groups(state, [gc.BLACKS_TURN])
+        self.assertTrue(jnp.alltrue(jnp.array([[False, False, False, False, False],
+                                               [False, True, False, False, False],
+                                               [False, True, False, False, False],
+                                               [False, True, False, False, False],
+                                               [False, False, False, False, False], ]) == free_black_groups),
+                        free_black_groups)
+
+    def test_get_free_group_white(self):
+        state_str = """
+                    B _
+                    _ W 
+                    """
+        state = go.decode_state(state_str)
+        free_white_groups = go.get_free_groups(state, [gc.WHITES_TURN])
+        self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, True]]) == free_white_groups))
 
     def test_invalid_move_single_hole_no_liberties(self):
         state_str = """

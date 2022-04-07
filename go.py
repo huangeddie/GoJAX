@@ -1,6 +1,8 @@
+import textwrap
 from functools import partial
 
 import jax.numpy as jnp
+import jax.scipy as jsp
 from jax import jit
 from jax import lax
 
@@ -18,6 +20,14 @@ def new_states(board_size, batch_size=1):
     return state
 
 
+def get_at_pieces_per_turn(states, turns):
+    return states.at[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
+
+
+def get_pieces_per_turn(states, turns):
+    return states[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
+
+
 @jit
 def next_states(states, indicator_actions):
     """
@@ -26,7 +36,7 @@ def next_states(states, indicator_actions):
     in the batch, there should be at most one non-zero element representing the move. If all elements are 0,
     then it's considered a pass. :return: The next states of the board
     """
-    states = states.at[jnp.arange(states.shape[0]), jnp.array(get_turns(states), dtype=int)].max(indicator_actions)
+    states = get_at_pieces_per_turn(states, get_turns(states)).max(indicator_actions)
     # Change the turn
     states = states.at[:, go_constants.TURN_CHANNEL_INDEX].set(~states[:, go_constants.TURN_CHANNEL_INDEX])
 
@@ -75,6 +85,7 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
     :param komi:
     :return:
     """
+    encode_str = textwrap.dedent(encode_str)
     if encode_str[0] == '\n':
         encode_str = encode_str[1:]
     if encode_str[-1] == '\n':
@@ -101,3 +112,24 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
         state = state.at[0, go_constants.PASS_CHANNEL_INDEX].set(True)
 
     return state
+
+
+def get_free_groups(states, turns):
+    pieces = get_pieces_per_turn(states, turns)
+    free_spaces = ~jnp.sum(states[:, [0, 1]], axis=1, dtype=bool)
+    kernel = jnp.array([[[False, True, False],
+                         [True, True, True],
+                         [False, True, False]]])
+    free_pieces = jnp.logical_and(jsp.signal.convolve(free_spaces, kernel, mode='same'), pieces)
+    next_free_pieces = jnp.logical_and(jsp.signal.convolve(free_pieces, kernel, mode='same'), pieces)
+
+    last_two_states_free_pieces = jnp.stack([free_pieces, next_free_pieces], axis=1)
+
+    def cond_fun(x):
+        return jnp.any(x[:, 0] != x[:, 1])
+
+    def body_fun(x):
+        x = x.at[:, 0].set(x[:, 1])  # Copy the second state to the first state
+        return x.at[:, 1].set(jnp.logical_and(jsp.signal.convolve(x[:, 1], kernel, mode='same'), pieces))
+
+    return lax.while_loop(cond_fun, body_fun, last_two_states_free_pieces)[:, 1]

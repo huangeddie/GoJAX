@@ -29,18 +29,8 @@ class GoTest(unittest.TestCase):
     def test_to_indicator_actions_black_move(self):
         state = go.new_states(2)
         indicator_actions = go.to_indicator_actions([(0, 0)], state)
-        self.assertTrue(jnp.alltrue(lax.eq(indicator_actions, jnp.array([[[[True, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]],
-                                                                          [[False, False],
-                                                                           [False, False]]]]))))
+        self.assertTrue(jnp.alltrue(lax.eq(indicator_actions, jnp.array([[[True, False],
+                                                                          [False, False]]]))))
 
     def test_to_indicator_actions_white_move(self):
         state = go.new_states(2)

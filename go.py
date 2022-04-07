@@ -36,7 +36,9 @@ def next_states(states, indicator_actions):
     in the batch, there should be at most one non-zero element representing the move. If all elements are 0,
     then it's considered a pass. :return: The next states of the board
     """
-    states = get_at_pieces_per_turn(states, get_turns(states)).max(indicator_actions)
+    turns = get_turns(states)
+    states = get_at_pieces_per_turn(states, turns).max(indicator_actions)
+
     # Change the turn
     states = states.at[:, go_constants.TURN_CHANNEL_INDEX].set(~states[:, go_constants.TURN_CHANNEL_INDEX])
 
@@ -73,7 +75,8 @@ def get_turns(states):
     :param states:
     :return: A boolean list indicating whose turn it is for each state
     """
-    return list(map(lambda s: jnp.all(s[2] == 1), states))
+
+    return jnp.alltrue(states[:, go_constants.TURN_CHANNEL_INDEX], axis=(1, 2))
 
 
 def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed: bool = False, komi=None):

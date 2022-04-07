@@ -59,7 +59,7 @@ class GoTest(unittest.TestCase):
     def test_get_turns(self):
         states = go.new_states(2, batch_size=2)
         states = states.at[0, 2].set(True)
-        self.assertEqual(go.get_turns(states), [True, False])
+        self.assertTrue(jnp.alltrue(go.get_turns(states) == jnp.array([True, False])))
 
     def test_white_moves_second(self):
         state = go.new_states(4)
@@ -75,16 +75,16 @@ class GoTest(unittest.TestCase):
 
     def test_black_and_white_moves_in_batch(self):
         states = go.new_states(2, batch_size=2)
-        states = states.at[0, 2].set(True)
-        self.assertEqual(go.get_turns(states), [True, False])
+        states = states.at[0, gc.TURN_CHANNEL_INDEX].set(True)
+        self.assertTrue(jnp.alltrue(go.get_turns(states) == jnp.array([True, False])), go.get_turns(states))
         states = go.next_states(states, go.to_indicator_actions([None, None], states))
-        self.assertEqual(go.get_turns(states), [False, True])
+        self.assertTrue(jnp.alltrue(go.get_turns(states) == jnp.array([False, True])), go.get_turns(states))
 
     def test_pass_changes_turn(self):
         state = go.new_states(2)
-        self.assertEqual(go.get_turns(state), [False])
+        self.assertTrue(jnp.alltrue(go.get_turns(state) == jnp.array([False])))
         state = go.next_states(state, go.to_indicator_actions([None], state))
-        self.assertEqual(go.get_turns(state), [True])
+        self.assertTrue(jnp.alltrue(go.get_turns(state) == jnp.array([True])))
 
     def test_pass_sets_pass_layer(self):
         state = go.new_states(2)

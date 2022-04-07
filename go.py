@@ -28,7 +28,6 @@ def get_pieces_per_turn(states, turns):
     return states[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
 
 
-@jit
 def next_states(states, indicator_actions):
     """
     :param states:
@@ -37,14 +36,20 @@ def next_states(states, indicator_actions):
     then it's considered a pass. :return: The next states of the board
     """
     turns = get_turns(states)
+    opponents = ~turns
+
+    # Add the piece
     states = get_at_pieces_per_turn(states, turns).max(indicator_actions)
+
+    # Remove trapped pieces
+    states = get_at_pieces_per_turn(states, opponents).set(get_free_groups(states, opponents))
 
     # Change the turn
     states = states.at[:, go_constants.TURN_CHANNEL_INDEX].set(~states[:, go_constants.TURN_CHANNEL_INDEX])
 
     # Get passed states
-    previously_passed = states[:, go_constants.PASS_CHANNEL_INDEX]
-    passed = jnp.alltrue(lax.eq(indicator_actions, jnp.zeros_like(indicator_actions)), axis=(1, 2))
+    previously_passed = jnp.alltrue(states[:, go_constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
+    passed = jnp.alltrue(~indicator_actions, axis=(1, 2), keepdims=True)
 
     # Set pass
     states = states.at[:, go_constants.PASS_CHANNEL_INDEX].set(passed)
@@ -61,9 +66,8 @@ def to_indicator_actions(actions, states):
     :param states: The corresponding list of states.
     :return: A (N x B x B) sparse array representing indicator actions for each state.
     """
-    turns = get_turns(states)
     indicator_actions = jnp.zeros((states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
-    for i, (action, turn) in enumerate(zip(actions, turns)):
+    for i, action in enumerate(actions):
         if action is None:
             continue
         indicator_actions = indicator_actions.at[i, action[0], action[1]].set(True)

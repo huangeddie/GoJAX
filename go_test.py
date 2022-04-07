@@ -64,7 +64,7 @@ class GoTest(unittest.TestCase):
             jnp.alltrue(lax.eq(state[0, gc.TURN_CHANNEL_INDEX], jnp.zeros_like(state[0, gc.TURN_CHANNEL_INDEX]))))
 
     def test_black_and_white_moves_in_batch(self):
-        states = go.new_states(2, batch_size=2)
+        states = go.new_states(4, batch_size=2)
         states = states.at[0, gc.TURN_CHANNEL_INDEX].set(True)
         self.assertTrue(jnp.alltrue(go.get_turns(states) == jnp.array([True, False])), go.get_turns(states))
         states = go.next_states(states, go.to_indicator_actions([None, None], states))
@@ -275,7 +275,7 @@ class GoTest(unittest.TestCase):
         self.assertTrue(delta_board[gc.BLACK_CHANNEL_INDEX, 0, 1])
         self.assertTrue(next_state[0, gc.BLACK_CHANNEL_INDEX, 0, 1])
         # White piece removed
-        self.assertTrue(delta_board[gc.WHITE_CHANNEL_INDEX, 0, 1])
+        self.assertTrue(delta_board[gc.WHITE_CHANNEL_INDEX, 0, 0])
         self.assertFalse(next_state[0, gc.WHITE_CHANNEL_INDEX, 0, 0])
 
     def test_remove_two_connected_pieces(self):

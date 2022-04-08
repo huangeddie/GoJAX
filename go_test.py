@@ -95,20 +95,14 @@ class GoTest(unittest.TestCase):
 
     def test_invalid_move_space_occupied_by_opponent_pieces(self):
         state = go.new_states(2)
-        state = go.new_states(state, go.to_indicator_actions([(0, 0)], state))
-        self.assertEqual(go.get_turns(state), [True])
-        next_state = go.new_states(state, go.to_indicator_actions([(0, 0)], state))
-        # Invalid moves don't change the state
-        self.assertTrue(jnp.alltrue(lax.eq(next_state, state)))
+        next_state = go.next_states(state, go.to_indicator_actions([(0, 0)], state))
+        self.assertTrue(next_state[0, gc.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_invalid_move_space_occupied_by_own_pieces(self):
         state = go.new_states(2)
-        state = go.new_states(state, go.to_indicator_actions([(0, 0)], state))
-        state = go.new_states(state, go.to_indicator_actions([None], state))
-        self.assertEqual(go.get_turns(state), [False])
-        next_state = go.new_states(state, go.to_indicator_actions([(0, 0)], state))
-        # Invalid moves don't change the state
-        self.assertTrue(jnp.alltrue(lax.eq(next_state, state)))
+        state = go.next_states(state, go.to_indicator_actions([(0, 0)], state))
+        state = go.next_states(state, go.to_indicator_actions([None], state))
+        self.assertTrue(state[0, gc.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_decode_state_shape(self):
         state_str = """

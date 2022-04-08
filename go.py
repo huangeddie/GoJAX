@@ -54,6 +54,10 @@ def next_states(states, indicator_actions):
     # Set pass
     states = states.at[:, go_constants.PASS_CHANNEL_INDEX].set(passed)
 
+    # Set invalid moves
+    states = states.at[:, go_constants.INVALID_CHANNEL_INDEX].set(
+        jnp.sum(states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX]], axis=1, dtype=bool))
+
     # Set game ended
     states = states.at[:, go_constants.END_CHANNEL_INDEX].set(previously_passed & passed)
 

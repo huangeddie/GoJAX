@@ -6,7 +6,7 @@ import jax.scipy as jsp
 from jax import jit
 from jax import lax
 
-import go_constants
+import constants
 
 
 @partial(jit, static_argnums=[0, 1, 2])
@@ -18,7 +18,7 @@ def new_states(board_size, batch_size=1):
     :param batch_size: batch size (N).
     :return: An N x 6 x B x B JAX zero-array of representing new Go games.
     """
-    state = jnp.zeros((batch_size, go_constants.NUM_CHANNELS, board_size, board_size), dtype=bool)
+    state = jnp.zeros((batch_size, constants.NUM_CHANNELS, board_size, board_size), dtype=bool)
     return state
 
 
@@ -90,7 +90,7 @@ def get_turns(states):
     :return: a boolean array of length N indicating whose turn it is for each state.
     """
 
-    return jnp.alltrue(states[:, go_constants.TURN_CHANNEL_INDEX], axis=(1, 2))
+    return jnp.alltrue(states[:, constants.TURN_CHANNEL_INDEX], axis=(1, 2))
 
 
 def get_free_groups(states, turns):
@@ -143,12 +143,12 @@ def get_invalid_moves(states, my_killed_pieces):
         ghost_killed = jnp.logical_xor(get_pieces_per_turn(ghost_next_states, opponents),
                                        get_pieces_per_turn(ghost_maybe_kill, opponents))
         komi = jnp.sum(jnp.logical_and(my_killed_pieces, ghost_killed), axis=(1, 2), dtype=bool)
-        occupied = jnp.sum(_states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX], row, col],
+        occupied = jnp.sum(_states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX], row, col],
                            dtype=bool)
         no_liberties = jnp.sum(
             jnp.logical_xor(get_free_groups(ghost_maybe_kill, turns), get_pieces_per_turn(ghost_maybe_kill, turns)),
             axis=(1, 2), dtype=bool)
-        return _states.at[:, go_constants.INVALID_CHANNEL_INDEX, row, col].max(
+        return _states.at[:, constants.INVALID_CHANNEL_INDEX, row, col].max(
             jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi))
 
     return lax.fori_loop(0, states.shape[2] * states.shape[3], _maybe_set_invalid_move, states)
@@ -175,25 +175,25 @@ def next_states(states, indicator_actions):
     states = at_pieces_per_turn(states, opponents).set(get_free_groups(states, opponents))
 
     # Change the turn
-    states = states.at[:, go_constants.TURN_CHANNEL_INDEX].set(~states[:, go_constants.TURN_CHANNEL_INDEX])
+    states = states.at[:, constants.TURN_CHANNEL_INDEX].set(~states[:, constants.TURN_CHANNEL_INDEX])
 
     # Get passed states
-    previously_passed = jnp.alltrue(states[:, go_constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
+    previously_passed = jnp.alltrue(states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
     passed = jnp.alltrue(~indicator_actions, axis=(1, 2), keepdims=True)
 
     # Set pass
-    states = states.at[:, go_constants.PASS_CHANNEL_INDEX].set(passed)
+    states = states.at[:, constants.PASS_CHANNEL_INDEX].set(passed)
 
     # Set invalid moves
     states = get_invalid_moves(states, kill_pieces)
 
     # Set game ended
-    states = states.at[:, go_constants.END_CHANNEL_INDEX].set(previously_passed & passed)
+    states = states.at[:, constants.END_CHANNEL_INDEX].set(previously_passed & passed)
 
     return states
 
 
-def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed: bool = False, komi=None):
+def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bool = False, komi=None):
     """
     Creates a game board from the human-readable encoded string.
 
@@ -220,20 +220,20 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
     for i, line in enumerate(lines):
         for j, char in enumerate(line.split()):
             if char == 'B':
-                state = state.at[0, go_constants.BLACK_CHANNEL_INDEX, i, j].set(True)
+                state = state.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(True)
             elif char == 'W':
-                state = state.at[0, go_constants.WHITE_CHANNEL_INDEX, i, j].set(True)
+                state = state.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(True)
 
     # Set the turn
-    state = state.at[0, go_constants.TURN_CHANNEL_INDEX].set(turn)
+    state = state.at[0, constants.TURN_CHANNEL_INDEX].set(turn)
 
     # Set invalid moves
-    state = get_invalid_moves(state, jnp.zeros_like(state[:, go_constants.BLACK_CHANNEL_INDEX]))
+    state = get_invalid_moves(state, jnp.zeros_like(state[:, constants.BLACK_CHANNEL_INDEX]))
     if komi:
-        state = state.at[0, go_constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
+        state = state.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
 
     # Set if passed
     if passed:
-        state = state.at[0, go_constants.PASS_CHANNEL_INDEX].set(True)
+        state = state.at[0, constants.PASS_CHANNEL_INDEX].set(True)
 
     return state

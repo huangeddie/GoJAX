@@ -12,28 +12,68 @@ import go_constants
 @partial(jit, static_argnums=[0, 1, 2])
 def new_states(board_size, batch_size=1):
     """
-    :param board_size:
-    :param batch_size:
-    :return: Generates new JAX array representing new Go game
+    Returns a batch array of new Go games.
+
+    :param board_size: board size (B).
+    :param batch_size: batch size (N).
+    :return: An N x 6 x B x B JAX zero-array of representing new Go games.
     """
     state = jnp.zeros((batch_size, go_constants.NUM_CHANNELS, board_size, board_size), dtype=bool)
     return state
 
 
 def at_pieces_per_turn(states, turns):
+    """
+    Update reference to the black/white pieces of the states.
+
+    See `get_pieces_per_turn` to get a read-only view of the pieces.
+
+    :param states: an array of N Go games.
+    :param turns: a boolean array of length N indicating which pieces to reference per state.
+    :return: an update reference array of shape N x B x B.
+    """
     return states.at[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
 
 
+def at_location_per_turn(states, turns, row, col):
+    """
+    Update reference to specific turn-wise locations of the states.
+
+    A more specific version of `at_pieces_per_turn`.
+
+    :param states: an array of N Go games.
+    :param turns: a boolean array of length N indicating which pieces to reference per state.
+    :param row: integer row index.
+    :param col: integer column index.
+    :return: a scalar update reference.
+    """
+    return states.at[
+        jnp.arange(states.shape[0]), jnp.array(turns, dtype=int), jnp.full(states.shape[0], row), jnp.full(
+            states.shape[0], col)]
+
+
 def get_pieces_per_turn(states, turns):
+    """
+    Slices the black/white pieces of the states.
+
+    See `at_pieces_per_turn` to get an update reference view of the pieces.
+
+    :param states: an array of N Go games.
+    :param turns: a boolean array of length N indicating which pieces to reference per state.
+    :return: an array of shape N x B x B.
+    """
     return states[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
 
 
 def next_states(states, indicator_actions):
     """
-    :param states:
-    :param indicator_actions: A (N x B x B) sparse array of the same shape as states that represents the new actions. For each state
+    Compute the next batch of states in Go.
+
+    :param states: a batch array of N Go games.
+    :param indicator_actions: A (N x B x B) indicator array. For each state
     in the batch, there should be at most one non-zero element representing the move. If all elements are 0,
-    then it's considered a pass. :return: The next states of the board
+    then it's considered a pass.
+    :return: an N x C x B x B boolean array.
     """
     turns = get_turns(states)
     opponents = ~turns
@@ -64,19 +104,21 @@ def next_states(states, indicator_actions):
     return states
 
 
-def at_location_per_turn(states, turns, col, row):
-    return states.at[
-        jnp.arange(states.shape[0]), jnp.array(turns, dtype=int), jnp.full(states.shape[0], row), jnp.full(
-            states.shape[0], col)]
-
-
 def get_invalid_moves(states, my_killed_pieces):
+    """
+    Computes the invalid moves for the turns of each state.
+
+    :param states: a batch of N Go games.
+    :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the previous state.
+    :return: an N x B x B indicator array of invalid moves.
+    """
+
     def _maybe_set_invalid_move(_index, _states):
         row = jnp.floor_divide(_index, _states.shape[2])
         col = jnp.remainder(_index, _states.shape[3])
         turns = get_turns(_states)
         opponents = ~turns
-        ghost_next_states = at_location_per_turn(_states, turns, col, row).set(True)
+        ghost_next_states = at_location_per_turn(_states, turns, row, col).set(True)
         ghost_maybe_kill = at_pieces_per_turn(ghost_next_states, opponents).set(
             get_free_groups(ghost_next_states, opponents))
         ghost_killed = jnp.logical_xor(get_pieces_per_turn(ghost_next_states, opponents),
@@ -95,9 +137,12 @@ def get_invalid_moves(states, my_killed_pieces):
 
 def to_indicator_actions(actions, states):
     """
-    :param actions: A list of actions. Each element is either pass (None), or a tuple of integers representing a row, column coordinate.
-    :param states: The corresponding list of states.
-    :return: A (N x B x B) sparse array representing indicator actions for each state.
+    Converts a list of actions into their sparse indicator array form.
+
+    :param actions: a list of N actions. Each element is either pass (None), or a tuple of integers representing a row,
+    column coordinate.
+    :param states: a batch array of N Go games.
+    :return: a (N x B x B) sparse array representing indicator actions for each state.
     """
     indicator_actions = jnp.zeros((states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
     for i, action in enumerate(actions):
@@ -109,8 +154,10 @@ def to_indicator_actions(actions, states):
 
 def get_turns(states):
     """
-    :param states:
-    :return: A boolean list indicating whose turn it is for each state
+    Gets the turn for each state in states.
+
+    :param states: a batch array of N Go games.
+    :return: a boolean array of length N indicating whose turn it is for each state.
     """
 
     return jnp.alltrue(states[:, go_constants.TURN_CHANNEL_INDEX], axis=(1, 2))
@@ -119,11 +166,18 @@ def get_turns(states):
 def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed: bool = False, komi=None):
     """
     Creates a game board from the human-readable encoded string.
-    :param encode_str:
-    :param turn:
-    :param passed:
-    :param komi:
-    :return:
+
+    Example encoding:
+    ```
+    B W
+    W _
+    ```
+
+    :param encode_str: string representation of the Go game.
+    :param turn: boolean turn indicator.
+    :param passed: boolean indicator if the previous move was passed.
+    :param komi: 2d action or None.
+    :return: a 1 x C x B X B boolean array.
     """
     encode_str = textwrap.dedent(encode_str)
     if encode_str[0] == '\n':
@@ -154,6 +208,15 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
 
 
 def get_free_groups(states, turns):
+    """
+    Gets the free groups for each turn in the state of states.
+
+    Free groups are the opposite of surrounded groups which are to be removed.
+
+    :param states: a batch array of N Go games.
+    :param turns: a boolean array of length N.
+    :return: an N x B x B boolean array.
+    """
     pieces = get_pieces_per_turn(states, turns)
     free_spaces = ~jnp.sum(states[:, [0, 1]], axis=1, dtype=bool)
     kernel = jnp.array([[[False, True, False],

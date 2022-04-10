@@ -206,7 +206,7 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
     :param encode_str: string representation of the Go game.
     :param turn: boolean turn indicator.
     :param passed: boolean indicator if the previous move was passed.
-    :param komi: 2d action or None.
+    :param komi: 2d action (tuple of 2 integers) or None.
     :return: a 1 x C x B X B boolean array.
     """
     encode_str = textwrap.dedent(encode_str)
@@ -229,6 +229,8 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
 
     # Set invalid moves
     state = get_invalid_moves(state, jnp.zeros_like(state[:, go_constants.BLACK_CHANNEL_INDEX]))
+    if komi:
+        state = state.at[0, go_constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
 
     # Set if passed
     if passed:

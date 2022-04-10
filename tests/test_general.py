@@ -159,6 +159,16 @@ class GeneralTestCase(unittest.TestCase):
             jnp.alltrue(lax.eq(state[0, go_constants.PASS_CHANNEL_INDEX],
                                jnp.ones_like(state[0, go_constants.PASS_CHANNEL_INDEX]))))
 
+    def test_decode_state_komi(self):
+        state_str = """
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str, komi=(0, 0))
+        self.assertTrue(state[0, go_constants.INVALID_CHANNEL_INDEX, 0, 0])
+
     def test_get_free_groups_shape(self):
         state_str = """
                     _ _

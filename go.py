@@ -65,6 +65,95 @@ def get_pieces_per_turn(states, turns):
     return states[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
 
 
+def to_indicator_actions(actions, states):
+    """
+    Converts a list of actions into their sparse indicator array form.
+
+    :param actions: a list of N actions. Each element is either pass (None), or a tuple of integers representing a row,
+    column coordinate.
+    :param states: a batch array of N Go games.
+    :return: a (N x B x B) sparse array representing indicator actions for each state.
+    """
+    indicator_actions = jnp.zeros((states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
+    for i, action in enumerate(actions):
+        if action is None:
+            continue
+        indicator_actions = indicator_actions.at[i, action[0], action[1]].set(True)
+    return indicator_actions
+
+
+def get_turns(states):
+    """
+    Gets the turn for each state in states.
+
+    :param states: a batch array of N Go games.
+    :return: a boolean array of length N indicating whose turn it is for each state.
+    """
+
+    return jnp.alltrue(states[:, go_constants.TURN_CHANNEL_INDEX], axis=(1, 2))
+
+
+def get_free_groups(states, turns):
+    """
+    Gets the free groups for each turn in the state of states.
+
+    Free groups are the opposite of surrounded groups which are to be removed.
+
+    :param states: a batch array of N Go games.
+    :param turns: a boolean array of length N.
+    :return: an N x B x B boolean array.
+    """
+    pieces = get_pieces_per_turn(states, turns)
+    free_spaces = ~jnp.sum(states[:, [0, 1]], axis=1, dtype=bool)
+    kernel = jnp.array([[[False, True, False],
+                         [True, True, True],
+                         [False, True, False]]])
+    free_pieces = jnp.logical_and(jsp.signal.convolve(free_spaces, kernel, mode='same'), pieces)
+    next_free_pieces = jnp.logical_and(jsp.signal.convolve(free_pieces, kernel, mode='same'), pieces)
+
+    last_two_states_free_pieces = jnp.stack([free_pieces, next_free_pieces], axis=1)
+
+    def _cond_fun(x):
+        return jnp.any(x[:, 0] != x[:, 1])
+
+    def _body_fun(x):
+        x = x.at[:, 0].set(x[:, 1])  # Copy the second state to the first state
+        return x.at[:, 1].set(jnp.logical_and(jsp.signal.convolve(x[:, 1], kernel, mode='same'), pieces))
+
+    return lax.while_loop(_cond_fun, _body_fun, last_two_states_free_pieces)[:, 1]
+
+
+def get_invalid_moves(states, my_killed_pieces):
+    """
+    Computes the invalid moves for the turns of each state.
+
+    :param states: a batch of N Go games.
+    :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the previous state.
+    :return: an N x B x B indicator array of invalid moves.
+    """
+
+    def _maybe_set_invalid_move(_index, _states):
+        row = jnp.floor_divide(_index, _states.shape[2])
+        col = jnp.remainder(_index, _states.shape[3])
+        turns = get_turns(_states)
+        opponents = ~turns
+        ghost_next_states = at_location_per_turn(_states, turns, row, col).set(True)
+        ghost_maybe_kill = at_pieces_per_turn(ghost_next_states, opponents).set(
+            get_free_groups(ghost_next_states, opponents))
+        ghost_killed = jnp.logical_xor(get_pieces_per_turn(ghost_next_states, opponents),
+                                       get_pieces_per_turn(ghost_maybe_kill, opponents))
+        komi = jnp.sum(jnp.logical_and(my_killed_pieces, ghost_killed), axis=(1, 2), dtype=bool)
+        occupied = jnp.sum(_states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX], row, col],
+                           dtype=bool)
+        no_liberties = jnp.sum(
+            jnp.logical_xor(get_free_groups(ghost_maybe_kill, turns), get_pieces_per_turn(ghost_maybe_kill, turns)),
+            axis=(1, 2), dtype=bool)
+        return _states.at[:, go_constants.INVALID_CHANNEL_INDEX, row, col].max(
+            jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi))
+
+    return lax.fori_loop(0, states.shape[2] * states.shape[3], _maybe_set_invalid_move, states)
+
+
 def next_states(states, indicator_actions):
     """
     Compute the next batch of states in Go.
@@ -102,65 +191,6 @@ def next_states(states, indicator_actions):
     states = states.at[:, go_constants.END_CHANNEL_INDEX].set(previously_passed & passed)
 
     return states
-
-
-def get_invalid_moves(states, my_killed_pieces):
-    """
-    Computes the invalid moves for the turns of each state.
-
-    :param states: a batch of N Go games.
-    :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the previous state.
-    :return: an N x B x B indicator array of invalid moves.
-    """
-
-    def _maybe_set_invalid_move(_index, _states):
-        row = jnp.floor_divide(_index, _states.shape[2])
-        col = jnp.remainder(_index, _states.shape[3])
-        turns = get_turns(_states)
-        opponents = ~turns
-        ghost_next_states = at_location_per_turn(_states, turns, row, col).set(True)
-        ghost_maybe_kill = at_pieces_per_turn(ghost_next_states, opponents).set(
-            get_free_groups(ghost_next_states, opponents))
-        ghost_killed = jnp.logical_xor(get_pieces_per_turn(ghost_next_states, opponents),
-                                       get_pieces_per_turn(ghost_maybe_kill, opponents))
-        komi = jnp.sum(jnp.logical_and(my_killed_pieces, ghost_killed), axis=(1, 2), dtype=bool)
-        occupied = jnp.sum(_states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX], row, col],
-                           dtype=bool)
-        no_liberties = jnp.sum(
-            jnp.logical_xor(get_free_groups(ghost_maybe_kill, turns), get_pieces_per_turn(ghost_maybe_kill, turns)),
-            axis=(1, 2), dtype=bool)
-        return _states.at[:, go_constants.INVALID_CHANNEL_INDEX, row, col].max(
-            jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi))
-
-    return lax.fori_loop(0, states.shape[2] * states.shape[3], _maybe_set_invalid_move, states)
-
-
-def to_indicator_actions(actions, states):
-    """
-    Converts a list of actions into their sparse indicator array form.
-
-    :param actions: a list of N actions. Each element is either pass (None), or a tuple of integers representing a row,
-    column coordinate.
-    :param states: a batch array of N Go games.
-    :return: a (N x B x B) sparse array representing indicator actions for each state.
-    """
-    indicator_actions = jnp.zeros((states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
-    for i, action in enumerate(actions):
-        if action is None:
-            continue
-        indicator_actions = indicator_actions.at[i, action[0], action[1]].set(True)
-    return indicator_actions
-
-
-def get_turns(states):
-    """
-    Gets the turn for each state in states.
-
-    :param states: a batch array of N Go games.
-    :return: a boolean array of length N indicating whose turn it is for each state.
-    """
-
-    return jnp.alltrue(states[:, go_constants.TURN_CHANNEL_INDEX], axis=(1, 2))
 
 
 def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed: bool = False, komi=None):
@@ -205,33 +235,3 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
         state = state.at[0, go_constants.PASS_CHANNEL_INDEX].set(True)
 
     return state
-
-
-def get_free_groups(states, turns):
-    """
-    Gets the free groups for each turn in the state of states.
-
-    Free groups are the opposite of surrounded groups which are to be removed.
-
-    :param states: a batch array of N Go games.
-    :param turns: a boolean array of length N.
-    :return: an N x B x B boolean array.
-    """
-    pieces = get_pieces_per_turn(states, turns)
-    free_spaces = ~jnp.sum(states[:, [0, 1]], axis=1, dtype=bool)
-    kernel = jnp.array([[[False, True, False],
-                         [True, True, True],
-                         [False, True, False]]])
-    free_pieces = jnp.logical_and(jsp.signal.convolve(free_spaces, kernel, mode='same'), pieces)
-    next_free_pieces = jnp.logical_and(jsp.signal.convolve(free_pieces, kernel, mode='same'), pieces)
-
-    last_two_states_free_pieces = jnp.stack([free_pieces, next_free_pieces], axis=1)
-
-    def _cond_fun(x):
-        return jnp.any(x[:, 0] != x[:, 1])
-
-    def _body_fun(x):
-        x = x.at[:, 0].set(x[:, 1])  # Copy the second state to the first state
-        return x.at[:, 1].set(jnp.logical_and(jsp.signal.convolve(x[:, 1], kernel, mode='same'), pieces))
-
-    return lax.while_loop(_cond_fun, _body_fun, last_two_states_free_pieces)[:, 1]

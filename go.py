@@ -20,7 +20,7 @@ def new_states(board_size, batch_size=1):
     return state
 
 
-def get_at_pieces_per_turn(states, turns):
+def at_pieces_per_turn(states, turns):
     return states.at[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
 
 
@@ -39,10 +39,10 @@ def next_states(states, indicator_actions):
     opponents = ~turns
 
     # Add the piece
-    states = get_at_pieces_per_turn(states, turns).max(indicator_actions)
+    states = at_pieces_per_turn(states, turns).max(indicator_actions)
 
     # Remove trapped pieces
-    states = get_at_pieces_per_turn(states, opponents).set(get_free_groups(states, opponents))
+    states = at_pieces_per_turn(states, opponents).set(get_free_groups(states, opponents))
 
     # Change the turn
     states = states.at[:, go_constants.TURN_CHANNEL_INDEX].set(~states[:, go_constants.TURN_CHANNEL_INDEX])

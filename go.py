@@ -55,13 +55,23 @@ def next_states(states, indicator_actions):
     states = states.at[:, go_constants.PASS_CHANNEL_INDEX].set(passed)
 
     # Set invalid moves
-    states = states.at[:, go_constants.INVALID_CHANNEL_INDEX].set(
-        jnp.sum(states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX]], axis=1, dtype=bool))
+    states = get_invalid_moves(states)
 
     # Set game ended
     states = states.at[:, go_constants.END_CHANNEL_INDEX].set(previously_passed & passed)
 
     return states
+
+
+def _maybe_set_invalid_move(index, states):
+    row = jnp.floor_divide(index, states.shape[2])
+    col = jnp.remainder(index, states.shape[3])
+    return states.at[:, go_constants.INVALID_CHANNEL_INDEX, row, col].set(
+        jnp.sum(states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX], row, col], dtype=bool))
+
+
+def get_invalid_moves(states):
+    return lax.fori_loop(0, states.shape[2] * states.shape[3], _maybe_set_invalid_move, states)
 
 
 def to_indicator_actions(actions, states):

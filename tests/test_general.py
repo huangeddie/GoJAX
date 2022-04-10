@@ -159,7 +159,7 @@ class GeneralTestCase(unittest.TestCase):
             jnp.alltrue(lax.eq(state[0, go_constants.PASS_CHANNEL_INDEX],
                                jnp.ones_like(state[0, go_constants.PASS_CHANNEL_INDEX]))))
 
-    def test_free_group_shape(self):
+    def test_get_free_groups_shape(self):
         state_str = """
                     _ _
                     _ _ 
@@ -168,7 +168,7 @@ class GeneralTestCase(unittest.TestCase):
         free_black_groups = go.get_free_groups(state, [go_constants.BLACKS_TURN])
         self.assertEqual((1, 2, 2), free_black_groups.shape)
 
-    def test_get_free_group_free_single_piece(self):
+    def test_get_free_groups_free_single_piece(self):
         state_str = """
                     B _
                     _ _ 
@@ -177,7 +177,7 @@ class GeneralTestCase(unittest.TestCase):
         free_black_groups = go.get_free_groups(state, [go_constants.BLACKS_TURN])
         self.assertTrue(jnp.alltrue(jnp.array([[True, False], [False, False]]) == free_black_groups))
 
-    def test_get_free_group_non_free_single_piece(self):
+    def test_get_free_groups_non_free_single_piece(self):
         state_str = """
                     B W
                     W _ 
@@ -187,7 +187,7 @@ class GeneralTestCase(unittest.TestCase):
         self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, False]]) == free_black_groups),
                         free_black_groups)
 
-    def test_get_free_group_free_chain(self):
+    def test_get_free_groups_free_chain(self):
         state_str = """
                     _ W _ _ _
                     W B W _ _
@@ -204,7 +204,7 @@ class GeneralTestCase(unittest.TestCase):
                                                [False, False, False, False, False], ]) == free_black_groups),
                         free_black_groups)
 
-    def test_get_free_group_white(self):
+    def test_get_free_groups_white(self):
         state_str = """
                     B _
                     _ W 
@@ -213,76 +213,7 @@ class GeneralTestCase(unittest.TestCase):
         free_white_groups = go.get_free_groups(state, [go_constants.WHITES_TURN])
         self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, True]]) == free_white_groups))
 
-    def test_remove_single_piece(self):
-        state_str = """
-                    W _ _ _
-                    B _ _ _
-                    _ _ _ _
-                    _ _ _ _
-                    """
-        state = go.decode_state(state_str, go_constants.BLACKS_TURN)
 
-        next_state = go.next_states(state, go.to_indicator_actions([(0, 1)], state))
-
-        # Check that the white piece is gone and the black piece is added
-        delta_board = jnp.logical_xor(next_state[0, [0, 1]], state[0, [0, 1]])
-        # Only have two changes
-        self.assertEqual(jnp.sum(delta_board), 2)
-        # The black piece is added
-        self.assertTrue(delta_board[go_constants.BLACK_CHANNEL_INDEX, 0, 1])
-        self.assertTrue(next_state[0, go_constants.BLACK_CHANNEL_INDEX, 0, 1])
-        # White piece removed
-        self.assertTrue(delta_board[go_constants.WHITE_CHANNEL_INDEX, 0, 0])
-        self.assertFalse(next_state[0, go_constants.WHITE_CHANNEL_INDEX, 0, 0])
-
-    def test_remove_two_connected_pieces(self):
-        state_str = """
-                    W W _ _
-                    B B _ _
-                    _ _ _ _
-                    _ _ _ _
-                    """
-        state = go.decode_state(state_str, go_constants.BLACKS_TURN)
-        next_state = go.next_states(state, go.to_indicator_actions([(0, 2)], state))
-        self.assertTrue(jnp.alltrue(~next_state[0, go_constants.WHITE_CHANNEL_INDEX]))
-        self.assertTrue(
-            jnp.alltrue(next_state[0, go_constants.BLACK_CHANNEL_INDEX] == jnp.array([[False, False, True, False],
-                                                                                      [True, True, False, False],
-                                                                                      [False, False, False, False],
-                                                                                      [False, False, False, False]])),
-            next_state[0, go_constants.BLACK_CHANNEL_INDEX])
-
-    def test_remove_two_disjoint_pieces(self):
-        state_str = """
-                    W _ W B
-                    B _ B _
-                    _ _ _ _
-                    _ _ _ _
-                    """
-        state = go.decode_state(state_str, go_constants.BLACKS_TURN)
-        next_state = go.next_states(state, go.to_indicator_actions([(0, 1)], state))
-        self.assertTrue(jnp.alltrue(~next_state[0, go_constants.WHITE_CHANNEL_INDEX]))
-        self.assertTrue(
-            jnp.alltrue(next_state[0, go_constants.BLACK_CHANNEL_INDEX] == jnp.array([[False, True, False, True],
-                                                                                      [True, False, True, False],
-                                                                                      [False, False, False, False],
-                                                                                      [False, False, False, False]])))
-
-    def test_remove_donut(self):
-        state_str = """
-                    B B B W
-                    B _ B W
-                    B B B W
-                    W W W _
-                    """
-        state = go.decode_state(state_str, go_constants.WHITES_TURN)
-        next_state = go.next_states(state, go.to_indicator_actions([(1, 1)], state))
-        self.assertTrue(jnp.alltrue(~next_state[0, go_constants.BLACK_CHANNEL_INDEX]))
-        self.assertTrue(
-            jnp.alltrue(next_state[0, go_constants.WHITE_CHANNEL_INDEX] == jnp.array([[False, False, False, True],
-                                                                                      [False, True, False, True],
-                                                                                      [False, False, False, True],
-                                                                                      [True, True, True, False]])))
 
     if __name__ == '__main__':
         unittest.main()

@@ -221,6 +221,19 @@ class GoTest(unittest.TestCase):
         free_white_groups = go.get_free_groups(state, [gc.WHITES_TURN])
         self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, True]]) == free_white_groups))
 
+    def test_invalid_move_single_hole_no_liberties_manual_build(self):
+        """
+        X B _ _
+        B _ _ _
+        _ _ _ _
+        _ _ _ _
+        """
+        state = go.new_states(4)
+        state = go.next_states(state, go.to_indicator_actions([[0, 1]], state))
+        state = go.next_states(state, go.to_indicator_actions([None], state))
+        state = go.next_states(state, go.to_indicator_actions([[1, 0]], state))
+        self.assertTrue(state[:, gc.INVALID_CHANNEL_INDEX, 0, 0])
+
     def test_invalid_move_single_hole_no_liberties(self):
         state_str = """
                     X B _ _
@@ -229,10 +242,8 @@ class GoTest(unittest.TestCase):
                     _ _ _ _
                     """
         state = go.decode_state(state_str, gc.WHITES_TURN)
+        self.assertTrue(state[:, gc.INVALID_CHANNEL_INDEX, 0, 0])
 
-        next_state = go.next_states(state, go.to_indicator_actions([(0, 0)], state))
-        # Invalid moves don't change the state
-        self.assertTrue(jnp.alltrue(lax.eq(next_state, state)))
 
     def test_invalid_move_no_liberties_connect_to_group(self):
         state_str = """
@@ -242,10 +253,7 @@ class GoTest(unittest.TestCase):
                     _ _ _ _
                     """
         state = go.decode_state(state_str, gc.BLACKS_TURN)
-
-        next_state = go.next_states(state, go.to_indicator_actions([(0, 1)], state))
-        # Invalid moves don't change the state
-        self.assertTrue(jnp.alltrue(lax.eq(next_state, state)))
+        self.assertTrue(state[0, gc.INVALID_CHANNEL_INDEX, 0, 1])
 
     def test_invalid_move_komi(self):
         self.assertEqual(True, False)  # add assertion here

@@ -66,8 +66,18 @@ def next_states(states, indicator_actions):
 def _maybe_set_invalid_move(index, states):
     row = jnp.floor_divide(index, states.shape[2])
     col = jnp.remainder(index, states.shape[3])
-    return states.at[:, go_constants.INVALID_CHANNEL_INDEX, row, col].set(
-        jnp.sum(states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX], row, col], dtype=bool))
+    turns = get_turns(states)
+    opponents = ~turns
+    ghost_states = states.at[
+        jnp.arange(states.shape[0]), jnp.array(turns, dtype=int), jnp.full(states.shape[0], row), jnp.full(
+            states.shape[0], col)].set(True)
+    ghost_maybe_kill = at_pieces_per_turn(ghost_states, opponents).set(get_free_groups(ghost_states, opponents))
+    occupied = jnp.sum(states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX], row, col],
+                       dtype=bool)
+    no_liberties = jnp.sum(
+        jnp.logical_xor(get_free_groups(ghost_maybe_kill, turns), get_pieces_per_turn(ghost_maybe_kill, turns)),
+        axis=(1, 2), dtype=bool)
+    return states.at[:, go_constants.INVALID_CHANNEL_INDEX, row, col].max(jnp.logical_or(occupied, no_liberties))
 
 
 def get_invalid_moves(states):
@@ -124,9 +134,8 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
     # Set the turn
     state = state.at[0, go_constants.TURN_CHANNEL_INDEX].set(turn)
 
-    # TODO: Set the invalid channel
-    state = state.at[0, go_constants.INVALID_CHANNEL_INDEX].set(
-        jnp.zeros_like(state[0, go_constants.INVALID_CHANNEL_INDEX]))
+    # Set invalid moves
+    state = get_invalid_moves(state)
 
     # Set if passed
     if passed:

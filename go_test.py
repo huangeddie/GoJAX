@@ -256,7 +256,15 @@ class GoTest(unittest.TestCase):
         self.assertTrue(state[0, gc.INVALID_CHANNEL_INDEX, 0, 1])
 
     def test_invalid_move_komi(self):
-        self.assertEqual(True, False)  # add assertion here
+        state_str = """
+                    _ B W _
+                    B W _ W
+                    _ B W _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str, gc.BLACKS_TURN)
+        next_state = go.next_states(state, go.to_indicator_actions([(1, 2)], state))
+        self.assertTrue(next_state[:, gc.INVALID_CHANNEL_INDEX, 1, 1])
 
     def test_remove_single_piece(self):
         state_str = """

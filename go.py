@@ -42,6 +42,7 @@ def next_states(states, indicator_actions):
     states = at_pieces_per_turn(states, turns).max(indicator_actions)
 
     # Remove trapped pieces
+    kill_pieces = jnp.logical_xor(get_pieces_per_turn(states, opponents), get_free_groups(states, opponents))
     states = at_pieces_per_turn(states, opponents).set(get_free_groups(states, opponents))
 
     # Change the turn
@@ -55,28 +56,12 @@ def next_states(states, indicator_actions):
     states = states.at[:, go_constants.PASS_CHANNEL_INDEX].set(passed)
 
     # Set invalid moves
-    states = get_invalid_moves(states)
+    states = get_invalid_moves(states, kill_pieces)
 
     # Set game ended
     states = states.at[:, go_constants.END_CHANNEL_INDEX].set(previously_passed & passed)
 
     return states
-
-
-def _maybe_set_invalid_move(index, states):
-    row = jnp.floor_divide(index, states.shape[2])
-    col = jnp.remainder(index, states.shape[3])
-    turns = get_turns(states)
-    opponents = ~turns
-    ghost_next_states = at_location_per_turn(states, turns, col, row).set(True)
-    ghost_maybe_kill = at_pieces_per_turn(ghost_next_states, opponents).set(
-        get_free_groups(ghost_next_states, opponents))
-    occupied = jnp.sum(states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX], row, col],
-                       dtype=bool)
-    no_liberties = jnp.sum(
-        jnp.logical_xor(get_free_groups(ghost_maybe_kill, turns), get_pieces_per_turn(ghost_maybe_kill, turns)),
-        axis=(1, 2), dtype=bool)
-    return states.at[:, go_constants.INVALID_CHANNEL_INDEX, row, col].max(jnp.logical_or(occupied, no_liberties))
 
 
 def at_location_per_turn(states, turns, col, row):
@@ -85,7 +70,26 @@ def at_location_per_turn(states, turns, col, row):
             states.shape[0], col)]
 
 
-def get_invalid_moves(states):
+def get_invalid_moves(states, my_killed_pieces):
+    def _maybe_set_invalid_move(_index, _states):
+        row = jnp.floor_divide(_index, _states.shape[2])
+        col = jnp.remainder(_index, _states.shape[3])
+        turns = get_turns(_states)
+        opponents = ~turns
+        ghost_next_states = at_location_per_turn(_states, turns, col, row).set(True)
+        ghost_maybe_kill = at_pieces_per_turn(ghost_next_states, opponents).set(
+            get_free_groups(ghost_next_states, opponents))
+        ghost_killed = jnp.logical_xor(get_pieces_per_turn(ghost_next_states, opponents),
+                                       get_pieces_per_turn(ghost_maybe_kill, opponents))
+        komi = jnp.sum(jnp.logical_and(my_killed_pieces, ghost_killed), axis=(1, 2), dtype=bool)
+        occupied = jnp.sum(_states[:, [go_constants.BLACK_CHANNEL_INDEX, go_constants.WHITE_CHANNEL_INDEX], row, col],
+                           dtype=bool)
+        no_liberties = jnp.sum(
+            jnp.logical_xor(get_free_groups(ghost_maybe_kill, turns), get_pieces_per_turn(ghost_maybe_kill, turns)),
+            axis=(1, 2), dtype=bool)
+        return _states.at[:, go_constants.INVALID_CHANNEL_INDEX, row, col].max(
+            jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi))
+
     return lax.fori_loop(0, states.shape[2] * states.shape[3], _maybe_set_invalid_move, states)
 
 
@@ -140,7 +144,7 @@ def decode_state(encode_str: str, turn: bool = go_constants.BLACKS_TURN, passed:
     state = state.at[0, go_constants.TURN_CHANNEL_INDEX].set(turn)
 
     # Set invalid moves
-    state = get_invalid_moves(state)
+    state = get_invalid_moves(state, jnp.zeros_like(state[:, go_constants.BLACK_CHANNEL_INDEX]))
 
     # Set if passed
     if passed:

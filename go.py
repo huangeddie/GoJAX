@@ -1,15 +1,12 @@
 import textwrap
-from functools import partial
 
 import jax.numpy as jnp
 import jax.scipy as jsp
-from jax import jit
 from jax import lax
 
 import constants
 
 
-@partial(jit, static_argnums=[0, 1, 2])
 def new_states(board_size, batch_size=1):
     """
     Returns a batch array of new Go games.
@@ -154,7 +151,6 @@ def get_invalid_moves(states, my_killed_pieces):
     return lax.fori_loop(0, states.shape[2] * states.shape[3], _maybe_set_invalid_move, states)
 
 
-@jit
 def next_states(states, indicator_actions):
     """
     Compute the next batch of states in Go.

@@ -154,6 +154,7 @@ def get_invalid_moves(states, my_killed_pieces):
     return lax.fori_loop(0, states.shape[2] * states.shape[3], _maybe_set_invalid_move, states)
 
 
+@jit
 def next_states(states, indicator_actions):
     """
     Compute the next batch of states in Go.
@@ -237,3 +238,75 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
         state = state.at[0, constants.PASS_CHANNEL_INDEX].set(True)
 
     return state
+
+
+def get_pretty_string(state):
+    """
+    Creates a human-friendly string of the given state.
+
+    :param state: C x B x B boolean array .
+    :return: string representing the state.
+    """
+    board_str = ''
+
+    size = state.shape[1]
+    board_str += '\t'
+    for i in range(size):
+        board_str += '{}'.format(i).ljust(2, ' ')
+    board_str += '\n'
+    for i in range(size):
+        board_str += '{}\t'.format(i)
+        for j in range(size):
+            if state[0, i, j] == 1:
+                board_str += '○'
+                if j != size - 1:
+                    if i == 0 or i == size - 1:
+                        board_str += '═'
+                    else:
+                        board_str += '─'
+            elif state[1, i, j] == 1:
+                board_str += '●'
+                if j != size - 1:
+                    if i == 0 or i == size - 1:
+                        board_str += '═'
+                    else:
+                        board_str += '─'
+            else:
+                if i == 0:
+                    if j == 0:
+                        board_str += '╔═'
+                    elif j == size - 1:
+                        board_str += '╗'
+                    else:
+                        board_str += '╤═'
+                elif i == size - 1:
+                    if j == 0:
+                        board_str += '╚═'
+                    elif j == size - 1:
+                        board_str += '╝'
+                    else:
+                        board_str += '╧═'
+                else:
+                    if j == 0:
+                        board_str += '╟─'
+                    elif j == size - 1:
+                        board_str += '╢'
+                    else:
+                        board_str += '┼─'
+        board_str += '\n'
+
+    # TODO: Include empty spaces surrounded by either all black or all white pieces.
+    black_area, white_area = jnp.sum(state[constants.BLACK_CHANNEL_INDEX]), jnp.sum(
+        state[constants.WHITE_CHANNEL_INDEX])
+    done = jnp.alltrue(state[constants.END_CHANNEL_INDEX])
+    previous_player_passed = jnp.alltrue(state[constants.PASS_CHANNEL_INDEX])
+    turn = jnp.alltrue(state[constants.TURN_CHANNEL_INDEX])
+    if done:
+        game_state = 'END'
+    elif previous_player_passed:
+        game_state = 'PASSED'
+    else:
+        game_state = 'ONGOING'
+    board_str += f"\tTurn: {'BLACK' if turn == 0 else 'WHITE'}, Game State: {game_state}\n"
+    board_str += f'\tBlack Area: {black_area}, White Area: {white_area}\n'
+    return board_str

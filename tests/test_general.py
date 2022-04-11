@@ -223,7 +223,15 @@ class GeneralTestCase(unittest.TestCase):
         free_white_groups = go.get_free_groups(state, [constants.WHITES_TURN])
         self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, True]]) == free_white_groups))
 
-
+    def test_get_pretty_string(self):
+        state_str = """
+                    B _ _ _
+                    _ W _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str)
+        print(go.get_pretty_string(state[0]))
 
     if __name__ == '__main__':
         unittest.main()

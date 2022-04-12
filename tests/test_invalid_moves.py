@@ -1,5 +1,7 @@
 import unittest
 
+from jax import numpy as jnp
+
 import constants
 import go
 
@@ -48,6 +50,33 @@ class InvalidMovesTestCase(unittest.TestCase):
                     """
         state = go.decode_state(state_str, constants.BLACKS_TURN)
         self.assertTrue(state[0, constants.INVALID_CHANNEL_INDEX, 0, 1])
+
+    def test_get_action_is_invalid_false(self):
+        state_str = """
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str, constants.BLACKS_TURN)
+        action1d = 0
+        my_killed_pieces = jnp.zeros((1, 4, 4), dtype=bool)
+        self.assertFalse(go.get_action_is_invalid(action1d, state, my_killed_pieces))
+
+    def test_get_action_is_invalid_komi(self):
+        state_str = """
+                    _ B W _
+                    B W _ W
+                    _ B W _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str, constants.BLACKS_TURN)
+        action1d = 6
+        my_killed_pieces = jnp.array([[[False, False, False, False],
+                                       [False, False, True, False],
+                                       [False, False, False, False],
+                                       [False, False, False, False]]])
+        self.assertTrue(go.get_action_is_invalid(action1d, state, my_killed_pieces))
 
     def test_komi(self):
         state_str = """

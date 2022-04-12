@@ -123,14 +123,15 @@ def get_free_groups(states, turns):
 
 def get_action_is_invalid(action_1d, states, my_killed_pieces):
     """
-    Computes whether the given move index is valid.
+    Computes whether the given actions are valid for each state.
 
     Komi is defined as a special type of invalid move where the following criteria are met:
     • The previous move by the opponent killed exactly one of our pieces.
     • The move would 'revive' said single killed piece, that is the move is the same location where our piece died.
     • The move would kill exactly one of the opponent's pieces.
 
-    :param action_1d: 1D action index.
+    :param action_1d: 1D action index. For a given action `(row, col)` in a Go game with board size `B`, the 1D form of
+    the action would be `row x B + col`. The actions are in 1D form so that this function can be `jax.vmap`-ed.
     :param states: a batch array of N Go games.
     :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the previous state.
     :return: a boolean array of length N indicating whether the moves are invalid.

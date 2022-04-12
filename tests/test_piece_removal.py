@@ -2,8 +2,7 @@ import unittest
 
 import jax.numpy as jnp
 
-import constants
-import go
+from gojax import go, constants
 
 
 class PieceRemovalTestCase(unittest.TestCase):

@@ -3,8 +3,7 @@ import unittest
 import jax.numpy as jnp
 from jax import lax
 
-import constants
-import go
+from gojax import go, constants
 
 
 class GeneralTestCase(unittest.TestCase):

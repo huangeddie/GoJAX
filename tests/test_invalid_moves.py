@@ -2,8 +2,7 @@ import unittest
 
 from jax import numpy as jnp
 
-import constants
-import go
+from gojax import go, constants
 
 
 class InvalidMovesTestCase(unittest.TestCase):

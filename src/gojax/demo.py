@@ -1,7 +1,7 @@
 from jax import numpy as jnp
 
-import constants
-import go
+from gojax import constants
+from gojax import go
 
 if __name__ == '__main__':
     state = go.new_states(7)

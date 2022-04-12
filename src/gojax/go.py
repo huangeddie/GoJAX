@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import jax.scipy as jsp
 from jax import lax
 
-import constants
+from gojax import constants
 
 
 def new_states(board_size, batch_size=1):

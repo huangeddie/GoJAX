@@ -91,6 +91,27 @@ def get_turns(states):
     return jnp.alltrue(states[:, constants.TURN_CHANNEL_INDEX], axis=(1, 2))
 
 
+def get_passes(states):
+    """
+    Gets passes for each state in states.
+
+    :param states: a batch array of N Go games.
+    :return: a boolean array of length N indicating which state was passed.
+    """
+
+    return jnp.alltrue(states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2))
+
+
+def get_ended(states):
+    """
+    Indicates which states have ended.
+
+    :param states: a batch array of N Go games.
+    :return: a boolean array of length N indicating which state ended.
+    """
+    return jnp.alltrue(states[:, constants.END_CHANNEL_INDEX], axis=(1, 2))
+
+
 def get_free_groups(states, turns):
     """
     Gets the free groups for each turn in the state of states.

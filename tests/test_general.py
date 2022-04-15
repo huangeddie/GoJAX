@@ -46,8 +46,18 @@ class GeneralTestCase(unittest.TestCase):
 
     def test_get_turns(self):
         states = go.new_states(2, batch_size=2)
-        states = states.at[0, 2].set(True)
+        states = states.at[0, constants.TURN_CHANNEL_INDEX].set(True)
         self.assertTrue(jnp.alltrue(go.get_turns(states) == jnp.array([True, False])))
+
+    def test_get_passes(self):
+        states = go.new_states(2, batch_size=2)
+        states = states.at[0, constants.PASS_CHANNEL_INDEX].set(True)
+        self.assertTrue(jnp.alltrue(go.get_passes(states) == jnp.array([True, False])))
+
+    def test_get_ended_false(self):
+        states = go.new_states(2, batch_size=2)
+        states = states.at[0, constants.END_CHANNEL_INDEX].set(True)
+        self.assertTrue(jnp.alltrue(go.get_ended(states) == jnp.array([True, False])))
 
     def test_white_moves_second(self):
         state = go.new_states(4)

@@ -233,7 +233,8 @@ def next_states(states, indicator_actions):
     return states
 
 
-def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bool = False, komi=None):
+def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bool = False, komi=None,
+                 ended: bool = False):
     """
     Creates a game board from the human-readable encoded string.
 
@@ -247,6 +248,7 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
     :param turn: boolean turn indicator.
     :param passed: boolean indicator if the previous move was passed.
     :param komi: 2d action (tuple of 2 integers) or None.
+    :param ended: whether the game ended.
     :return: a 1 x C x B X B boolean array.
     """
     encode_str = textwrap.dedent(encode_str)
@@ -273,9 +275,11 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
     if komi:
         state = state.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
 
-    # Set if passed
-    if passed:
-        state = state.at[0, constants.PASS_CHANNEL_INDEX].set(True)
+    # Set passed
+    state = state.at[0, constants.PASS_CHANNEL_INDEX].set(passed)
+
+    # Set ended
+    state = state.at[0, constants.END_CHANNEL_INDEX].set(ended)
 
     return state
 

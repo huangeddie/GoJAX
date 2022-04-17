@@ -156,6 +156,18 @@ class GeneralTestCase(unittest.TestCase):
         self.assertTrue(state[0, constants.BLACK_CHANNEL_INDEX, 0, 0])
         self.assertTrue(state[0, constants.WHITE_CHANNEL_INDEX, 3, 3])
 
+    def test_decode_state_pass_default_false(self):
+        state_str = """
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str)
+        self.assertTrue(
+            jnp.alltrue(lax.eq(state[0, constants.PASS_CHANNEL_INDEX],
+                               jnp.zeros_like(state[0, constants.PASS_CHANNEL_INDEX]))))
+
     def test_decode_state_pass(self):
         state_str = """
                     _ _ _ _
@@ -167,6 +179,30 @@ class GeneralTestCase(unittest.TestCase):
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, constants.PASS_CHANNEL_INDEX],
                                jnp.ones_like(state[0, constants.PASS_CHANNEL_INDEX]))))
+
+    def test_decode_state_ended_default_false(self):
+        state_str = """
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str)
+        self.assertTrue(
+            jnp.alltrue(lax.eq(state[0, constants.END_CHANNEL_INDEX],
+                               jnp.zeros_like(state[0, constants.END_CHANNEL_INDEX]))))
+
+    def test_decode_state_ended(self):
+        state_str = """
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = go.decode_state(state_str, ended=True)
+        self.assertTrue(
+            jnp.alltrue(lax.eq(state[0, constants.END_CHANNEL_INDEX],
+                               jnp.ones_like(state[0, constants.END_CHANNEL_INDEX]))))
 
     def test_decode_state_komi(self):
         state_str = """

@@ -240,7 +240,8 @@ class GeneralTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = go.decode_state(state_str)
-        print(go.get_pretty_string(state[0]))
+        expected_str = open('expected_pretty_string.txt', 'r').read()
+        self.assertEqual(expected_str, go.get_pretty_string(state[0]))
 
     if __name__ == '__main__':
         unittest.main()

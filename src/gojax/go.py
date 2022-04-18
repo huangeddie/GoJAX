@@ -50,19 +50,6 @@ def at_location_per_turn(states, turns, row, col):
             states.shape[0], col)]
 
 
-def get_pieces_per_turn(states, turns):
-    """
-    Slices the black/white pieces of the states.
-
-    See `at_pieces_per_turn` to get an update reference view of the pieces.
-
-    :param states: an array of N Go games.
-    :param turns: a boolean array of length N indicating which pieces to reference per state.
-    :return: an array of shape N x B x B.
-    """
-    return states[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
-
-
 def to_indicator_actions(actions, states):
     """
     Converts a list of actions into their sparse indicator array form.
@@ -78,6 +65,19 @@ def to_indicator_actions(actions, states):
             continue
         indicator_actions = indicator_actions.at[i, action[0], action[1]].set(True)
     return indicator_actions
+
+
+def get_pieces_per_turn(states, turns):
+    """
+    Slices the black/white pieces of the states.
+
+    See `at_pieces_per_turn` to get an update reference view of the pieces.
+
+    :param states: an array of N Go games.
+    :param turns: a boolean array of length N indicating which pieces to reference per state.
+    :return: an array of shape N x B x B.
+    """
+    return states[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
 
 
 def get_turns(states):
@@ -153,18 +153,23 @@ def get_free_groups(states, turns):
     return lax.while_loop(_cond_fun, _body_fun, last_two_states_free_pieces)[:, 1]
 
 
-def get_action_is_invalid(action_1d, states, my_killed_pieces):
+def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
     """
     Computes whether the given actions are valid for each state.
+
+    An action is invalid if any of the following are met:
+    • The space is occupied by a piece.
+    • The action does not remove any opponent groups and the resulting group has no liberties.
+    • The move is blocked by Komi.
 
     Komi is defined as a special type of invalid move where the following criteria are met:
     • The previous move by the opponent killed exactly one of our pieces.
     • The move would 'revive' said single killed piece, that is the move is the same location where our piece died.
     • The move would kill exactly one of the opponent's pieces.
 
+    :param states: a batch array of N Go games.
     :param action_1d: 1D action index. For a given action `(row, col)` in a Go game with board size `B`, the 1D form of
     the action would be `row x B + col`. The actions are in 1D form so that this function can be `jax.vmap`-ed.
-    :param states: a batch array of N Go games.
     :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the previous state.
     :return: a boolean array of length N indicating whether the moves are invalid.
     """
@@ -191,7 +196,7 @@ def get_action_is_invalid(action_1d, states, my_killed_pieces):
     return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi)
 
 
-def get_invalid_moves(states, my_killed_pieces):
+def compute_invalid_actions(states, my_killed_pieces):
     """
     Computes the invalid moves for the turns of each state.
 
@@ -200,8 +205,10 @@ def get_invalid_moves(states, my_killed_pieces):
     :return: an N x B x B indicator array of invalid moves.
     """
 
-    invalid_moves = jax.vmap(get_action_is_invalid, (0, None, None), 1)(jnp.arange(states.shape[2] * states.shape[3]),
-                                                                        states, my_killed_pieces)
+    invalid_moves = jax.vmap(compute_actions_are_invalid, (None, 0, None), 1)(states,
+                                                                              jnp.arange(
+                                                                                  states.shape[2] * states.shape[3]),
+                                                                              my_killed_pieces)
     return jnp.reshape(invalid_moves, (states.shape[0], states.shape[2], states.shape[3]))
 
 
@@ -236,7 +243,7 @@ def next_states(states, indicator_actions):
     states = states.at[:, constants.PASS_CHANNEL_INDEX].set(passed)
 
     # Set invalid moves
-    states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(get_invalid_moves(states, kill_pieces))
+    states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(compute_invalid_actions(states, kill_pieces))
 
     # Set game ended
     states = states.at[:, constants.END_CHANNEL_INDEX].set(previously_passed & passed)
@@ -282,7 +289,7 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
 
     # Set invalid moves
     state = state.at[:, constants.INVALID_CHANNEL_INDEX].set(
-        get_invalid_moves(state, jnp.zeros_like(state[:, constants.BLACK_CHANNEL_INDEX])))
+        compute_invalid_actions(state, jnp.zeros_like(state[:, constants.BLACK_CHANNEL_INDEX])))
     if komi:
         state = state.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
 

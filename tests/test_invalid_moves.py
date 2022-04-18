@@ -60,7 +60,7 @@ class InvalidMovesTestCase(unittest.TestCase):
         state = go.decode_state(state_str, constants.BLACKS_TURN)
         action1d = 0
         my_killed_pieces = jnp.zeros((1, 4, 4), dtype=bool)
-        self.assertFalse(go.get_action_is_invalid(action1d, state, my_killed_pieces))
+        self.assertFalse(go.compute_actions_are_invalid(state, action1d, my_killed_pieces))
 
     def test_get_action_is_invalid_komi(self):
         state_str = """
@@ -75,7 +75,7 @@ class InvalidMovesTestCase(unittest.TestCase):
                                        [False, False, True, False],
                                        [False, False, False, False],
                                        [False, False, False, False]]])
-        self.assertTrue(go.get_action_is_invalid(action1d, state, my_killed_pieces))
+        self.assertTrue(go.compute_actions_are_invalid(state, action1d, my_killed_pieces))
 
     def test_komi(self):
         state_str = """

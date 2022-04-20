@@ -1,9 +1,11 @@
 import unittest
 
 import jax.numpy as jnp
+import numpy as np
 from jax import lax
 
-from gojax import go, constants
+from gojax import constants
+from gojax import go
 
 
 class GeneralTestCase(unittest.TestCase):
@@ -223,13 +225,41 @@ class GeneralTestCase(unittest.TestCase):
         state = go.decode_state(state_str, komi=(0, 0))
         self.assertTrue(state[0, constants.INVALID_CHANNEL_INDEX, 0, 0])
 
+    def test_get_occupied_spaces(self):
+        state_str = """
+                    _ B _ _
+                    B _ B _
+                    _ B _ _
+                    _ _ W _
+                    """
+        state = go.decode_state(state_str, komi=(0, 0))
+        occupied_spaces = go.get_occupied_spaces(state)
+        np.testing.assert_array_equal(occupied_spaces, [[[False, True, False, False],
+                                                         [True, False, True, False],
+                                                         [False, True, False, False],
+                                                         [False, False, True, False]]])
+
+    def test_get_empty_spaces(self):
+        state_str = """
+                    _ B _ _
+                    B _ B _
+                    _ B _ _
+                    _ _ W _
+                    """
+        state = go.decode_state(state_str, komi=(0, 0))
+        empty_spaces = go.get_empty_spaces(state)
+        np.testing.assert_array_equal(empty_spaces, [[[True, False, True, True],
+                                                      [False, True, False, True],
+                                                      [True, False, True, True],
+                                                      [True, True, False, True]]])
+
     def test_get_free_groups_shape(self):
         state_str = """
                     _ _
                     _ _ 
                     """
         state = go.decode_state(state_str)
-        free_black_groups = go.get_free_groups(state, [constants.BLACKS_TURN])
+        free_black_groups = go.compute_free_groups(state, [constants.BLACKS_TURN])
         self.assertEqual((1, 2, 2), free_black_groups.shape)
 
     def test_get_free_groups_free_single_piece(self):
@@ -238,7 +268,7 @@ class GeneralTestCase(unittest.TestCase):
                     _ _ 
                     """
         state = go.decode_state(state_str)
-        free_black_groups = go.get_free_groups(state, [constants.BLACKS_TURN])
+        free_black_groups = go.compute_free_groups(state, [constants.BLACKS_TURN])
         self.assertTrue(jnp.alltrue(jnp.array([[True, False], [False, False]]) == free_black_groups))
 
     def test_get_free_groups_non_free_single_piece(self):
@@ -247,7 +277,7 @@ class GeneralTestCase(unittest.TestCase):
                     W _ 
                     """
         state = go.decode_state(state_str)
-        free_black_groups = go.get_free_groups(state, [constants.BLACKS_TURN])
+        free_black_groups = go.compute_free_groups(state, [constants.BLACKS_TURN])
         self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, False]]) == free_black_groups),
                         free_black_groups)
 
@@ -260,7 +290,7 @@ class GeneralTestCase(unittest.TestCase):
                     _ _ _ _ _
                     """
         state = go.decode_state(state_str)
-        free_black_groups = go.get_free_groups(state, [constants.BLACKS_TURN])
+        free_black_groups = go.compute_free_groups(state, [constants.BLACKS_TURN])
         self.assertTrue(jnp.alltrue(jnp.array([[False, False, False, False, False],
                                                [False, True, False, False, False],
                                                [False, True, False, False, False],
@@ -274,8 +304,8 @@ class GeneralTestCase(unittest.TestCase):
                     _ W 
                     """
         state = go.decode_state(state_str)
-        free_white_groups = go.get_free_groups(state, [constants.WHITES_TURN])
-        self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, True]]) == free_white_groups))
+        free_white_groups = go.compute_free_groups(state, [constants.WHITES_TURN])
+        np.testing.assert_array_equal(free_white_groups, [[[False, False], [False, True]]])
 
     def test_get_pretty_string(self):
         state_str = """
@@ -287,6 +317,57 @@ class GeneralTestCase(unittest.TestCase):
         state = go.decode_state(state_str)
         expected_str = open('expected_pretty_string.txt', 'r').read()
         self.assertEqual(expected_str, go.get_pretty_string(state[0]))
+
+    def test_compute_areas_pieces(self):
+        state_str = """
+                    B _ _
+                    _ _ _
+                    _ _ W
+                    """
+        state = go.decode_state(state_str)
+        areas = go.compute_areas(state)
+        np.testing.assert_array_equal(areas, [[[[True, False, False],
+                                                [False, False, False],
+                                                [False, False, False]],
+                                               [[False, False, False],
+                                                [False, False, False],
+                                                [False, False, True]]]])
+
+    def test_compute_areas_single_piece_controls_all(self):
+        state_str = """
+                    B _ _
+                    _ _ _
+                    _ _ _
+                    """
+        state = go.decode_state(state_str)
+        areas = go.compute_areas(state)
+        np.testing.assert_array_equal(areas, [[[[True, True, True],
+                                                [True, True, True],
+                                                [True, True, True]],
+                                               [[False, False, False],
+                                                [False, False, False],
+                                                [False, False, False]]]])
+
+    def test_compute_areas_donut(self):
+        state_str = """
+                    _ _ _ _ _
+                    _ W B _ _
+                    _ B _ B _
+                    _ _ B _ _
+                    _ _ _ _ _
+                    """
+        state = go.decode_state(state_str)
+        areas = go.compute_areas(state)
+        np.testing.assert_array_equal(areas, [[[[False, False, False, False, False],
+                                                [False, False, True, False, False],
+                                                [False, True, True, True, False],
+                                                [False, False, True, False, False],
+                                                [False, False, False, False, False]],
+                                               [[False, False, False, False, False],
+                                                [False, True, False, False, False],
+                                                [False, False, False, False, False],
+                                                [False, False, False, False, False],
+                                                [False, False, False, False, False]]]])
 
     if __name__ == '__main__':
         unittest.main()

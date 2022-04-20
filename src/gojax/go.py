@@ -123,9 +123,67 @@ def get_ended(states):
     return jnp.alltrue(states[:, constants.END_CHANNEL_INDEX], axis=(1, 2))
 
 
-def get_free_groups(states, turns):
+def get_empty_spaces(states):
     """
-    Gets the free groups for each turn in the state of states.
+    Gets the empty spaces for each state.
+
+    :param states: a batch array of N Go games.
+    :return: an N x B x B boolean array.
+    """
+    return ~jnp.sum(states[:, [0, 1]], axis=1, dtype=bool)
+
+
+def get_occupied_spaces(states):
+    """
+    Gets the occupied spaces for each state (i.e. any black or white piecee).
+
+    :param states: a batch array of N Go games.
+    :return: an N x B x B boolean array.
+    """
+    return jnp.sum(states[:, [0, 1]], axis=1, dtype=bool)
+
+
+def _paint_fill(seeds, areas):
+    """
+    Paint fills the seeds to expand as much area as they can expand to in all 4 cardinal directions.
+
+    Analogous to the Microsoft paint fill feature.
+
+    Note that the seeds must intersect a location of an area in order to fill it. It cannot be adjacent to an area.
+
+    :param seeds: an N x B x B boolean array where the True entries are the seeds.
+    :param areas: an N x B x B boolean array where the True entries are areas.
+    :return: an N x B x B boolean array.
+    """
+    kernel = _get_cardinally_connected_kernel()
+    second_expansion = jnp.logical_and(jsp.signal.convolve(seeds, kernel, mode='same'), areas)
+    last_two_expansions = jnp.stack([seeds, second_expansion], axis=1)
+
+    def _last_expansion_no_change(x):
+        return jnp.any(x[:, 0] != x[:, 1])
+
+    def _expand(x):
+        x = x.at[:, 0].set(x[:, 1])  # Copy the second state to the first state
+        return x.at[:, 1].set(jnp.logical_and(jsp.signal.convolve(x[:, 1], kernel, mode='same'), areas))
+
+    return lax.while_loop(_last_expansion_no_change, _expand, last_two_expansions)[:, 1]
+
+
+def _get_cardinally_connected_kernel():
+    """
+    Returns a kernel used to in convolution used to expand a batch of 2D boolean arrays in all four cardinal directions.
+
+    :return: 1 x 3 x 3 boolean array.
+    """
+    kernel = jnp.array([[[False, True, False],
+                         [True, True, True],
+                         [False, True, False]]])
+    return kernel
+
+
+def compute_free_groups(states, turns):
+    """
+    Computes the free groups for each turn in the state of states.
 
     Free groups are the opposite of surrounded groups which are to be removed.
 
@@ -134,23 +192,39 @@ def get_free_groups(states, turns):
     :return: an N x B x B boolean array.
     """
     pieces = get_pieces_per_turn(states, turns)
-    free_spaces = ~jnp.sum(states[:, [0, 1]], axis=1, dtype=bool)
-    kernel = jnp.array([[[False, True, False],
-                         [True, True, True],
-                         [False, True, False]]])
-    free_pieces = jnp.logical_and(jsp.signal.convolve(free_spaces, kernel, mode='same'), pieces)
-    next_free_pieces = jnp.logical_and(jsp.signal.convolve(free_pieces, kernel, mode='same'), pieces)
+    empty_spaces = get_empty_spaces(states)
+    kernel = _get_cardinally_connected_kernel()
+    immediate_free_pieces = jnp.logical_and(jsp.signal.convolve(empty_spaces, kernel, mode='same'), pieces)
 
-    last_two_states_free_pieces = jnp.stack([free_pieces, next_free_pieces], axis=1)
+    return _paint_fill(immediate_free_pieces, pieces)
 
-    def _cond_fun(x):
-        return jnp.any(x[:, 0] != x[:, 1])
 
-    def _body_fun(x):
-        x = x.at[:, 0].set(x[:, 1])  # Copy the second state to the first state
-        return x.at[:, 1].set(jnp.logical_and(jsp.signal.convolve(x[:, 1], kernel, mode='same'), pieces))
+def compute_areas(states):
+    """
+    Compute the black and white areas of the states.
 
-    return lax.while_loop(_cond_fun, _body_fun, last_two_states_free_pieces)[:, 1]
+    An area is defined as the set of points where the point is either the player's piece or part of an empty group that
+    is completely surrounded by the player's pieces (i.e. is not adjacent to any of the opponent's pieces).
+
+    :param states: a batch array of N Go games.
+    :return: an N x 2 x B x B boolean array, where the 0th and 1st indices of the 2nd dimension represent the black and
+    white areas respectively.
+    """
+    black_pieces = states[:, constants.BLACK_CHANNEL_INDEX]
+    white_pieces = states[:, constants.WHITE_CHANNEL_INDEX]
+    kernel = _get_cardinally_connected_kernel()
+    empty_spaces = get_empty_spaces(states)
+    immediately_connected_to_black = jnp.logical_and(jsp.signal.convolve(black_pieces, kernel, mode='same'),
+                                                     empty_spaces)
+    immediately_connected_to_white = jnp.logical_and(jsp.signal.convolve(white_pieces, kernel, mode='same'),
+                                                     empty_spaces)
+    connected_to_black = _paint_fill(immediately_connected_to_black, empty_spaces)
+    connected_to_white = _paint_fill(immediately_connected_to_white, empty_spaces)
+
+    white_area = jnp.logical_or(jnp.logical_and(~connected_to_black, empty_spaces), white_pieces)
+    black_area = jnp.logical_or(jnp.logical_and(~connected_to_white, empty_spaces), black_pieces)
+
+    return jnp.stack([black_area, white_area], axis=1)
 
 
 def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
@@ -179,7 +253,7 @@ def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
     opponents = ~turns
     ghost_next_states = at_location_per_turn(states, turns, row, col).set(True)
     ghost_maybe_kill = at_pieces_per_turn(ghost_next_states, opponents).set(
-        get_free_groups(ghost_next_states, opponents))
+        compute_free_groups(ghost_next_states, opponents))
     ghost_killed = jnp.logical_xor(get_pieces_per_turn(ghost_next_states, opponents),
                                    get_pieces_per_turn(ghost_maybe_kill, opponents))
     num_casualties = jnp.sum(my_killed_pieces, axis=(1, 2))
@@ -191,7 +265,7 @@ def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
     occupied = jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX], row, col],
                        dtype=bool)
     no_liberties = jnp.sum(
-        jnp.logical_xor(get_free_groups(ghost_maybe_kill, turns), get_pieces_per_turn(ghost_maybe_kill, turns)),
+        jnp.logical_xor(compute_free_groups(ghost_maybe_kill, turns), get_pieces_per_turn(ghost_maybe_kill, turns)),
         axis=(1, 2), dtype=bool)
     return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi)
 
@@ -229,8 +303,8 @@ def next_states(states, indicator_actions):
     states = at_pieces_per_turn(states, turns).max(indicator_actions)
 
     # Remove trapped pieces
-    kill_pieces = jnp.logical_xor(get_pieces_per_turn(states, opponents), get_free_groups(states, opponents))
-    states = at_pieces_per_turn(states, opponents).set(get_free_groups(states, opponents))
+    kill_pieces = jnp.logical_xor(get_pieces_per_turn(states, opponents), compute_free_groups(states, opponents))
+    states = at_pieces_per_turn(states, opponents).set(compute_free_groups(states, opponents))
 
     # Change the turn
     states = states.at[:, constants.TURN_CHANNEL_INDEX].set(~states[:, constants.TURN_CHANNEL_INDEX])

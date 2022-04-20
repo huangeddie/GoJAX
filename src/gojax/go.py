@@ -99,7 +99,7 @@ def get_invalids(states):
     :return: an N x B x B boolean array.
     """
 
-    return jnp.alltrue(states[:, constants.INVALID_CHANNEL_INDEX], axis=(1, 2))
+    return states[:, constants.INVALID_CHANNEL_INDEX]
 
 
 def get_passes(states):
@@ -276,30 +276,30 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
         encode_str = encode_str[:-1]
     lines = encode_str.splitlines()
     board_size = len(lines)
-    state = new_states(board_size, batch_size=1)
+    states = new_states(board_size, batch_size=1)
     for i, line in enumerate(lines):
         for j, char in enumerate(line.split()):
             if char == 'B':
-                state = state.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(True)
+                states = states.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(True)
             elif char == 'W':
-                state = state.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(True)
+                states = states.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(True)
 
     # Set the turn
-    state = state.at[0, constants.TURN_CHANNEL_INDEX].set(turn)
+    states = states.at[0, constants.TURN_CHANNEL_INDEX].set(turn)
 
     # Set invalid moves
-    state = state.at[:, constants.INVALID_CHANNEL_INDEX].set(
-        compute_invalid_actions(state, jnp.zeros_like(state[:, constants.BLACK_CHANNEL_INDEX])))
+    states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
+        compute_invalid_actions(states, jnp.zeros_like(states[:, constants.BLACK_CHANNEL_INDEX])))
     if komi:
-        state = state.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
+        states = states.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
 
     # Set passed
-    state = state.at[0, constants.PASS_CHANNEL_INDEX].set(passed)
+    states = states.at[0, constants.PASS_CHANNEL_INDEX].set(passed)
 
     # Set ended
-    state = state.at[0, constants.END_CHANNEL_INDEX].set(ended)
+    states = states.at[0, constants.END_CHANNEL_INDEX].set(ended)
 
-    return state
+    return states
 
 
 def get_pretty_string(state):

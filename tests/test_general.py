@@ -51,8 +51,12 @@ class GeneralTestCase(unittest.TestCase):
 
     def test_get_invalids(self):
         states = go.new_states(2, batch_size=2)
-        states = states.at[0, constants.INVALID_CHANNEL_INDEX].set(True)
-        self.assertTrue(jnp.alltrue(go.get_invalids(states) == jnp.array([True, False])))
+        states = states.at[1, constants.INVALID_CHANNEL_INDEX].set(True)
+        self.assertTrue(jnp.alltrue(go.get_invalids(states) == jnp.array([[[False, False],
+                                                                           [False, False]],
+                                                                          [[True, True],
+                                                                           [True, True]]
+                                                                          ])))
 
     def test_get_passes(self):
         states = go.new_states(2, batch_size=2)

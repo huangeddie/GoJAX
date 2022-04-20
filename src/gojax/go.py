@@ -151,33 +151,34 @@ def _paint_fill(seeds, areas):
 
     Note that the seeds must intersect a location of an area in order to fill it. It cannot be adjacent to an area.
 
-    :param seeds: an N x B x B boolean array where the True entries are the seeds.
-    :param areas: an N x B x B boolean array where the True entries are areas.
-    :return: an N x B x B boolean array.
+    :param seeds: an (xN)* x B x B boolean array where the True entries are the seeds.
+    :param areas: an (xN)* x B x B boolean array where the True entries are areas.
+    :return: an (xN)* x B x B boolean array.
     """
-    kernel = _get_cardinally_connected_kernel()
+    kernel = _get_cardinally_connected_kernel(jnp.ndim(seeds) - 2)
     second_expansion = jnp.logical_and(jsp.signal.convolve(seeds, kernel, mode='same'), areas)
-    last_two_expansions = jnp.stack([seeds, second_expansion], axis=1)
+    last_two_expansions = jnp.stack([seeds, second_expansion], axis=0)
 
     def _last_expansion_no_change(x):
-        return jnp.any(x[:, 0] != x[:, 1])
+        return jnp.any(x[0] != x[1])
 
     def _expand(x):
-        x = x.at[:, 0].set(x[:, 1])  # Copy the second state to the first state
-        return x.at[:, 1].set(jnp.logical_and(jsp.signal.convolve(x[:, 1], kernel, mode='same'), areas))
+        x = x.at[0].set(x[1])  # Copy the second state to the first state
+        return x.at[1].set(jnp.logical_and(jsp.signal.convolve(x[1], kernel, mode='same'), areas))
 
-    return lax.while_loop(_last_expansion_no_change, _expand, last_two_expansions)[:, 1]
+    return lax.while_loop(_last_expansion_no_change, _expand, last_two_expansions)[1]
 
 
-def _get_cardinally_connected_kernel():
+def _get_cardinally_connected_kernel(num_extra_dims):
     """
     Returns a kernel used to in convolution used to expand a batch of 2D boolean arrays in all four cardinal directions.
 
-    :return: 1 x 3 x 3 boolean array.
+    :param num_extra_dims: the number of extra dimensions before the 2D canvas.
+    :return: an x[num_extra_dims] x 3 x 3 boolean array.
     """
-    kernel = jnp.array([[[False, True, False],
-                         [True, True, True],
-                         [False, True, False]]])
+    kernel = jnp.expand_dims(jnp.array([[False, True, False],
+                                        [True, True, True],
+                                        [False, True, False]]), jnp.arange(num_extra_dims))
     return kernel
 
 
@@ -193,7 +194,7 @@ def compute_free_groups(states, turns):
     """
     pieces = get_pieces_per_turn(states, turns)
     empty_spaces = get_empty_spaces(states)
-    kernel = _get_cardinally_connected_kernel()
+    kernel = _get_cardinally_connected_kernel(jnp.ndim(pieces) - 2)
     immediate_free_pieces = jnp.logical_and(jsp.signal.convolve(empty_spaces, kernel, mode='same'), pieces)
 
     return _paint_fill(immediate_free_pieces, pieces)
@@ -210,21 +211,15 @@ def compute_areas(states):
     :return: an N x 2 x B x B boolean array, where the 0th and 1st indices of the 2nd dimension represent the black and
     white areas respectively.
     """
-    black_pieces = states[:, constants.BLACK_CHANNEL_INDEX]
-    white_pieces = states[:, constants.WHITE_CHANNEL_INDEX]
-    kernel = _get_cardinally_connected_kernel()
+    swapped_pieces = states[:, (constants.WHITE_CHANNEL_INDEX, constants.BLACK_CHANNEL_INDEX)]
+    kernel = _get_cardinally_connected_kernel(jnp.ndim(swapped_pieces) - 2)
     empty_spaces = get_empty_spaces(states)
-    immediately_connected_to_black = jnp.logical_and(jsp.signal.convolve(black_pieces, kernel, mode='same'),
-                                                     empty_spaces)
-    immediately_connected_to_white = jnp.logical_and(jsp.signal.convolve(white_pieces, kernel, mode='same'),
-                                                     empty_spaces)
-    connected_to_black = _paint_fill(immediately_connected_to_black, empty_spaces)
-    connected_to_white = _paint_fill(immediately_connected_to_white, empty_spaces)
 
-    white_area = jnp.logical_or(jnp.logical_and(~connected_to_black, empty_spaces), white_pieces)
-    black_area = jnp.logical_or(jnp.logical_and(~connected_to_white, empty_spaces), black_pieces)
-
-    return jnp.stack([black_area, white_area], axis=1)
+    immediately_connected_to_pieces = jnp.logical_and(jsp.signal.convolve(swapped_pieces, kernel, mode='same'),
+                                                      empty_spaces)
+    connected_to_pieces = _paint_fill(immediately_connected_to_pieces, empty_spaces)
+    pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]
+    return jnp.logical_or(jnp.logical_and(~connected_to_pieces, empty_spaces), pieces)
 
 
 def compute_actions_are_invalid(states, action_1d, my_killed_pieces):

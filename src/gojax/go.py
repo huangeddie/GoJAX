@@ -222,6 +222,16 @@ def compute_areas(states):
     return jnp.logical_or(jnp.logical_and(~connected_to_pieces, empty_spaces), pieces)
 
 
+def compute_area_sizes(states):
+    """
+    Compute the size of the black and white areas (i.e. the number of pieces and empty spaces controlled by each player).
+
+    :param states: a batch array of N Go games.
+    :return: an N x 2 integer array.
+    """
+    return jnp.sum(compute_areas(states), axis=(2, 3))
+
+
 def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
     """
     Computes whether the given actions are valid for each state.

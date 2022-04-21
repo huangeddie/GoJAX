@@ -369,5 +369,31 @@ class GeneralTestCase(unittest.TestCase):
                                                 [False, False, False, False, False],
                                                 [False, False, False, False, False]]]])
 
+    def test_compute_area_sizes_pieces(self):
+        state = go.decode_state("""
+                                B _ _
+                                _ _ _
+                                _ _ W
+                                """)
+        np.testing.assert_array_equal(go.compute_area_sizes(state), [[1, 1]])
+
+    def test_compute_area_sizes_single_piece_controls_all(self):
+        state = go.decode_state("""
+                                B _ _
+                                _ _ _
+                                _ _ _
+                                """)
+        np.testing.assert_array_equal(go.compute_area_sizes(state), [[9, 0]])
+
+    def test_compute_area_sizes_donut(self):
+        state = go.decode_state("""
+                                _ _ _ _ _
+                                _ W B _ _
+                                _ B _ B _
+                                _ _ B _ _
+                                _ _ _ _ _
+                                """)
+        np.testing.assert_array_equal(go.compute_area_sizes(state), [[5, 1]])
+
     if __name__ == '__main__':
         unittest.main()

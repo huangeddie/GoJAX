@@ -232,6 +232,20 @@ def compute_area_sizes(states):
     return jnp.sum(compute_areas(states), axis=(2, 3))
 
 
+def compute_winning(states):
+    """
+    Computes which player has the higher amount of area.
+
+    1 = black is winning
+    0 = tie
+    -1 = white is winning
+
+    :param states: a batch array of N Go games.
+    :return: an N integer array.
+    """
+    return lax.clamp(-1, -jnp.squeeze(jnp.diff(jnp.sum(compute_areas(states), axis=(2, 3))), axis=1), 1)
+
+
 def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
     """
     Computes whether the given actions are valid for each state.

@@ -395,5 +395,47 @@ class GeneralTestCase(unittest.TestCase):
                                 """)
         np.testing.assert_array_equal(go.compute_area_sizes(state), [[5, 1]])
 
+    def test_compute_winning_new_state_tie(self):
+        state = go.decode_state("""
+                                _ _ _
+                                _ _ _
+                                _ _ _
+                                """)
+        np.testing.assert_array_equal(go.compute_winning(state), [0])
+
+    def test_compute_winning_single_black(self):
+        state = go.decode_state("""
+                                _ _ _
+                                _ B _
+                                _ _ _
+                                """)
+        np.testing.assert_array_equal(go.compute_winning(state), [1])
+
+    def test_compute_winning_single_white(self):
+        state = go.decode_state("""
+                                _ _ _
+                                _ W _
+                                _ _ _
+                                """)
+        np.testing.assert_array_equal(go.compute_winning(state), [-1])
+
+    def test_compute_winning_tie_single_pieces(self):
+        state = go.decode_state("""
+                                _ _ _
+                                _ W _
+                                _ _ B
+                                """)
+        np.testing.assert_array_equal(go.compute_winning(state), [0])
+
+    def test_compute_winning_black_has_more_area_with_empty_space(self):
+        state = go.decode_state("""
+                                W W _ _ _
+                                W W B _ _
+                                _ B _ B _
+                                _ _ B _ _
+                                _ _ _ _ _
+                                """)
+        np.testing.assert_array_equal(go.compute_winning(state), [1])
+
     if __name__ == '__main__':
         unittest.main()

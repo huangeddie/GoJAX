@@ -437,5 +437,35 @@ class GeneralTestCase(unittest.TestCase):
                                 """)
         np.testing.assert_array_equal(go.compute_winning(state), [1])
 
+    def test_swap_perspectives_black_to_white(self):
+        state = go.decode_state("""
+                                B _ _
+                                _ _ _
+                                _ _ W
+                                """, turn=constants.BLACKS_TURN)
+        swapped_perspective = go.swap_perspectives(state)
+        np.testing.assert_array_equal(swapped_perspective[0, constants.BLACK_CHANNEL_INDEX], [[False, False, False],
+                                                                                              [False, False, False],
+                                                                                              [False, False, True]])
+        np.testing.assert_array_equal(swapped_perspective[0, constants.WHITE_CHANNEL_INDEX], [[True, False, False],
+                                                                                              [False, False, False],
+                                                                                              [False, False, False]])
+        np.testing.assert_array_equal(go.get_turns(swapped_perspective), [constants.WHITES_TURN])
+
+    def test_swap_perspectives_white_to_black(self):
+        state = go.decode_state("""
+                                B _ _
+                                _ _ _
+                                _ _ W
+                                """, turn=constants.WHITES_TURN)
+        swapped_perspective = go.swap_perspectives(state)
+        np.testing.assert_array_equal(swapped_perspective[0, constants.BLACK_CHANNEL_INDEX], [[False, False, False],
+                                                                                              [False, False, False],
+                                                                                              [False, False, True]])
+        np.testing.assert_array_equal(swapped_perspective[0, constants.WHITE_CHANNEL_INDEX], [[True, False, False],
+                                                                                              [False, False, False],
+                                                                                              [False, False, False]])
+        np.testing.assert_array_equal(go.get_turns(swapped_perspective), [constants.BLACKS_TURN])
+
     if __name__ == '__main__':
         unittest.main()

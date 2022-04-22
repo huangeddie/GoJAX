@@ -326,7 +326,7 @@ def next_states(states, indicator_actions):
     states = at_pieces_per_turn(states, opponents).set(compute_free_groups(states, opponents))
 
     # Change the turn
-    states = states.at[:, constants.TURN_CHANNEL_INDEX].set(~states[:, constants.TURN_CHANNEL_INDEX])
+    states = _change_turns(states)
 
     # Get passed states
     previously_passed = jnp.alltrue(states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
@@ -342,6 +342,28 @@ def next_states(states, indicator_actions):
     states = states.at[:, constants.END_CHANNEL_INDEX].set(previously_passed & passed)
 
     return states
+
+
+def _change_turns(states):
+    """
+    Changes the turn for each state in states.
+
+    :param states: a batch array of N Go games.
+    :return: a boolean array with the same shape as states.
+    """
+    return states.at[:, constants.TURN_CHANNEL_INDEX].set(~states[:, constants.TURN_CHANNEL_INDEX])
+
+
+def swap_perspectives(states):
+    """
+    Returns the same states but with the turns and pieces swapped.
+
+    :param states: a batch array of N Go games.
+    :return: a boolean array with the same shape as states.
+    """
+    swapped_pieces = states.at[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]].set(
+        states[:, [constants.WHITE_CHANNEL_INDEX, constants.BLACK_CHANNEL_INDEX]])
+    return _change_turns(swapped_pieces)
 
 
 def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bool = False, komi=None,

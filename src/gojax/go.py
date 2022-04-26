@@ -178,7 +178,7 @@ def _get_cardinally_connected_kernel(num_extra_dims):
     """
     kernel = jnp.expand_dims(jnp.array([[False, True, False],
                                         [True, True, True],
-                                        [False, True, False]]), jnp.arange(num_extra_dims))
+                                        [False, True, False]]), tuple(range(num_extra_dims)))
     return kernel
 
 

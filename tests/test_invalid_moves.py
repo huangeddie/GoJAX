@@ -1,22 +1,22 @@
 import unittest
 
+import gojax
 import numpy as np
-from gojax import constants, go
 from jax import numpy as jnp
 
 
 class InvalidMovesTestCase(unittest.TestCase):
     def test_space_occupied_by_opponent_pieces(self):
-        state = go.new_states(2)
-        next_state = go.next_states(
-            state, go.to_indicator_actions([(0, 0)], state))
-        self.assertTrue(next_state[0, constants.INVALID_CHANNEL_INDEX, 0, 0])
+        state = gojax.new_states(2)
+        next_state = gojax.next_states(
+            state, gojax.to_indicator_actions([(0, 0)], state))
+        self.assertTrue(next_state[0, gojax.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_space_occupied_by_own_pieces(self):
-        state = go.new_states(2)
-        state = go.next_states(state, go.to_indicator_actions([(0, 0)], state))
-        state = go.next_states(state, go.to_indicator_actions([None], state))
-        self.assertTrue(state[0, constants.INVALID_CHANNEL_INDEX, 0, 0])
+        state = gojax.new_states(2)
+        state = gojax.next_states(state, gojax.to_indicator_actions([(0, 0)], state))
+        state = gojax.next_states(state, gojax.to_indicator_actions([None], state))
+        self.assertTrue(state[0, gojax.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_single_hole_no_liberties_manual_build(self):
         """
@@ -25,11 +25,11 @@ class InvalidMovesTestCase(unittest.TestCase):
         _ _ _ _
         _ _ _ _
         """
-        state = go.new_states(4)
-        state = go.next_states(state, go.to_indicator_actions([[0, 1]], state))
-        state = go.next_states(state, go.to_indicator_actions([None], state))
-        state = go.next_states(state, go.to_indicator_actions([[1, 0]], state))
-        self.assertTrue(state[:, constants.INVALID_CHANNEL_INDEX, 0, 0])
+        state = gojax.new_states(4)
+        state = gojax.next_states(state, gojax.to_indicator_actions([[0, 1]], state))
+        state = gojax.next_states(state, gojax.to_indicator_actions([None], state))
+        state = gojax.next_states(state, gojax.to_indicator_actions([[1, 0]], state))
+        self.assertTrue(state[:, gojax.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_single_hole_no_liberties(self):
         state_str = """
@@ -38,8 +38,8 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = go.decode_state(state_str, constants.WHITES_TURN)
-        self.assertTrue(state[:, constants.INVALID_CHANNEL_INDEX, 0, 0])
+        state = gojax.decode_state(state_str, gojax.WHITES_TURN)
+        self.assertTrue(state[:, gojax.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_no_liberties_connect_to_group(self):
         state_str = """
@@ -48,8 +48,8 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = go.decode_state(state_str, constants.BLACKS_TURN)
-        self.assertTrue(state[0, constants.INVALID_CHANNEL_INDEX, 0, 1])
+        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
+        self.assertTrue(state[0, gojax.INVALID_CHANNEL_INDEX, 0, 1])
 
     def test_get_action_is_invalid_false(self):
         state_str = """
@@ -58,10 +58,10 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = go.decode_state(state_str, constants.BLACKS_TURN)
+        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
         action1d = 0
         my_killed_pieces = jnp.zeros((1, 4, 4), dtype=bool)
-        self.assertFalse(go.compute_actions_are_invalid(
+        self.assertFalse(gojax.compute_actions_are_invalid(
             state, action1d, my_killed_pieces))
 
     def test_get_action_is_invalid_komi(self):
@@ -71,13 +71,13 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ B W _
                     _ _ _ _
                     """
-        state = go.decode_state(state_str, constants.BLACKS_TURN)
+        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
         action1d = 6
         my_killed_pieces = jnp.array([[[False, False, False, False],
                                        [False, False, True, False],
                                        [False, False, False, False],
                                        [False, False, False, False]]])
-        self.assertTrue(go.compute_actions_are_invalid(
+        self.assertTrue(gojax.compute_actions_are_invalid(
             state, action1d, my_killed_pieces))
 
     def test_komi(self):
@@ -87,26 +87,26 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ B W _
                     _ _ _ _
                     """
-        state = go.decode_state(state_str, constants.BLACKS_TURN)
-        next_state = go.next_states(
-            state, go.to_indicator_actions([(1, 2)], state))
-        self.assertTrue(next_state[:, constants.INVALID_CHANNEL_INDEX, 1, 1])
+        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
+        next_state = gojax.next_states(
+            state, gojax.to_indicator_actions([(1, 2)], state))
+        self.assertTrue(next_state[:, gojax.INVALID_CHANNEL_INDEX, 1, 1])
 
     def test_invalid_move_no_op_pieces(self):
-        state = go.decode_state("""
+        state = gojax.decode_state("""
                                 _ _ _
                                 _ W _
                                 _ _ _
                                 """,
-                                constants.BLACKS_TURN)
-        next_state = go.next_states(
-            state, go.to_indicator_actions([(1, 1)], state))
-        np.testing.assert_array_equal(state[0, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
-                                      next_state[0, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]])
+                                   gojax.BLACKS_TURN)
+        next_state = gojax.next_states(
+            state, gojax.to_indicator_actions([(1, 1)], state))
+        np.testing.assert_array_equal(state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
+                                      next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
         np.testing.assert_array_equal(
-            go.get_turns(state), [constants.BLACKS_TURN])
-        np.testing.assert_array_equal(go.get_turns(
-            next_state), [constants.WHITES_TURN])
+            gojax.get_turns(state), [gojax.BLACKS_TURN])
+        np.testing.assert_array_equal(gojax.get_turns(
+            next_state), [gojax.WHITES_TURN])
 
 
 if __name__ == '__main__':

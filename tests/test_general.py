@@ -113,6 +113,22 @@ class GeneralTestCase(unittest.TestCase):
         state = go.next_states(state, go.to_indicator_actions([None], state))
         self.assertTrue(jnp.alltrue(lax.eq(state[0, constants.END_CHANNEL_INDEX],
                                            jnp.ones_like(state[0, constants.END_CHANNEL_INDEX]))))
+    
+    def test_game_end_no_op_pieces(self):
+        state = go.decode_state("""
+                                _ _ _
+                                _ _ _
+                                _ _ _
+                                """,
+                                ended=True)
+        next_state = go.next_states(
+            state, go.to_indicator_actions([(1, 1)], state))
+        np.testing.assert_array_equal(state[0, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
+                                      next_state[0, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]])
+        np.testing.assert_array_equal(go.get_turns(state), [constants.BLACKS_TURN])
+        np.testing.assert_array_equal(go.get_turns(next_state), [constants.WHITES_TURN])
+        np.testing.assert_array_equal(go.get_ended(state), [True])
+        np.testing.assert_array_equal(go.get_ended(next_state), [True])
 
     def test_decode_state_shape(self):
         state_str = """

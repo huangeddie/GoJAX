@@ -16,7 +16,8 @@ def new_states(board_size, batch_size=1):
     :param batch_size: batch size (N).
     :return: An N x 6 x B x B JAX zero-array of representing new Go games.
     """
-    state = jnp.zeros((batch_size, constants.NUM_CHANNELS, board_size, board_size), dtype=bool)
+    state = jnp.zeros((batch_size, constants.NUM_CHANNELS,
+                      board_size, board_size), dtype=bool)
     return state
 
 
@@ -59,11 +60,13 @@ def to_indicator_actions(actions, states):
     :param states: a batch array of N Go games.
     :return: a (N x B x B) sparse array representing indicator actions for each state.
     """
-    indicator_actions = jnp.zeros((states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
+    indicator_actions = jnp.zeros(
+        (states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
     for i, action in enumerate(actions):
         if action is None:
             continue
-        indicator_actions = indicator_actions.at[i, action[0], action[1]].set(True)
+        indicator_actions = indicator_actions.at[i, action[0], action[1]].set(
+            True)
     return indicator_actions
 
 
@@ -156,7 +159,8 @@ def _paint_fill(seeds, areas):
     :return: an (xN)* x B x B boolean array.
     """
     kernel = _get_cardinally_connected_kernel(jnp.ndim(seeds) - 2)
-    second_expansion = jnp.logical_and(jsp.signal.convolve(seeds, kernel, mode='same'), areas)
+    second_expansion = jnp.logical_and(
+        jsp.signal.convolve(seeds, kernel, mode='same'), areas)
     last_two_expansions = jnp.stack([seeds, second_expansion], axis=0)
 
     def _last_expansion_no_change(x):
@@ -195,7 +199,8 @@ def compute_free_groups(states, turns):
     pieces = get_pieces_per_turn(states, turns)
     empty_spaces = get_empty_spaces(states)
     kernel = _get_cardinally_connected_kernel(jnp.ndim(pieces) - 2)
-    immediate_free_pieces = jnp.logical_and(jsp.signal.convolve(empty_spaces, kernel, mode='same'), pieces)
+    immediate_free_pieces = jnp.logical_and(
+        jsp.signal.convolve(empty_spaces, kernel, mode='same'), pieces)
 
     return _paint_fill(immediate_free_pieces, pieces)
 
@@ -211,14 +216,17 @@ def compute_areas(states):
     :return: an N x 2 x B x B boolean array, where the 0th and 1st indices of the 2nd dimension represent the black and
     white areas respectively.
     """
-    swapped_pieces = states[:, (constants.WHITE_CHANNEL_INDEX, constants.BLACK_CHANNEL_INDEX)]
+    swapped_pieces = states[:, (constants.WHITE_CHANNEL_INDEX,
+                                constants.BLACK_CHANNEL_INDEX)]
     kernel = _get_cardinally_connected_kernel(jnp.ndim(swapped_pieces) - 2)
     empty_spaces = get_empty_spaces(states)
 
     immediately_connected_to_pieces = jnp.logical_and(jsp.signal.convolve(swapped_pieces, kernel, mode='same'),
                                                       empty_spaces)
-    connected_to_pieces = _paint_fill(immediately_connected_to_pieces, empty_spaces)
-    pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]
+    connected_to_pieces = _paint_fill(
+        immediately_connected_to_pieces, empty_spaces)
+    pieces = states[:, (constants.BLACK_CHANNEL_INDEX,
+                        constants.WHITE_CHANNEL_INDEX)]
     return jnp.logical_or(jnp.logical_and(~connected_to_pieces, empty_spaces), pieces)
 
 
@@ -284,7 +292,8 @@ def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
     occupied = jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX], row, col],
                        dtype=bool)
     no_liberties = jnp.sum(
-        jnp.logical_xor(compute_free_groups(ghost_maybe_kill, turns), get_pieces_per_turn(ghost_maybe_kill, turns)),
+        jnp.logical_xor(compute_free_groups(ghost_maybe_kill, turns),
+                        get_pieces_per_turn(ghost_maybe_kill, turns)),
         axis=(1, 2), dtype=bool)
     return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi)
 
@@ -305,6 +314,19 @@ def compute_invalid_actions(states, my_killed_pieces):
     return jnp.reshape(invalid_moves, (states.shape[0], states.shape[2], states.shape[3]))
 
 
+def _move_is_invalid(states, indicator_actions):
+    """
+    Gets whether the actions are invalid for the corresponding states.
+
+    :param states: a batch array of N Go games.
+    :param indicator_actions: A (N x B x B) indicator array. For each state
+    in the batch, there should be at most one non-zero element representing the move. If all elements are 0,
+    then it's considered a pass.
+    :return: a boolean array of length N.
+    """
+    return jnp.sum(get_invalids(states) & indicator_actions, axis=(1, 2), dtype=bool)
+
+
 def next_states(states, indicator_actions):
     """
     Compute the next batch of states in Go.
@@ -315,31 +337,44 @@ def next_states(states, indicator_actions):
     then it's considered a pass.
     :return: an N x C x B x B boolean array.
     """
+    # Get the players
     turns = get_turns(states)
     opponents = ~turns
+
+    # Change the turn
+    states = _change_turns(states)
+
+    # Save the current state after changing the turn because we may need to revert back to this checkpoint for some of them.
+    checkpoint_states = states
 
     # Add the piece
     states = at_pieces_per_turn(states, turns).max(indicator_actions)
 
     # Remove trapped pieces
-    kill_pieces = jnp.logical_xor(get_pieces_per_turn(states, opponents), compute_free_groups(states, opponents))
-    states = at_pieces_per_turn(states, opponents).set(compute_free_groups(states, opponents))
-
-    # Change the turn
-    states = _change_turns(states)
+    kill_pieces = jnp.logical_xor(get_pieces_per_turn(
+        states, opponents), compute_free_groups(states, opponents))
+    states = at_pieces_per_turn(states, opponents).set(
+        compute_free_groups(states, opponents))
 
     # Get passed states
-    previously_passed = jnp.alltrue(states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
+    previously_passed = jnp.alltrue(
+        states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
     passed = jnp.alltrue(~indicator_actions, axis=(1, 2), keepdims=True)
 
     # Set pass
     states = states.at[:, constants.PASS_CHANNEL_INDEX].set(passed)
 
     # Set invalid moves
-    states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(compute_invalid_actions(states, kill_pieces))
+    states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
+        compute_invalid_actions(states, kill_pieces))
 
     # Set game ended
-    states = states.at[:, constants.END_CHANNEL_INDEX].set(previously_passed & passed)
+    states = states.at[:, constants.END_CHANNEL_INDEX].set(
+        previously_passed & passed)
+
+    # Revert back to original state if the original state already ended or the action is invalid
+    states = jnp.where(jnp.expand_dims(get_ended(checkpoint_states) | _move_is_invalid(
+        checkpoint_states, indicator_actions), (1, 2, 3)), checkpoint_states, states)
 
     return states
 
@@ -395,9 +430,11 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
     for i, line in enumerate(lines):
         for j, char in enumerate(line.split()):
             if char == 'B':
-                states = states.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(True)
+                states = states.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(
+                    True)
             elif char == 'W':
-                states = states.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(True)
+                states = states.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(
+                    True)
 
     # Set the turn
     states = states.at[0, constants.TURN_CHANNEL_INDEX].set(turn)
@@ -406,7 +443,8 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
     states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
         compute_invalid_actions(states, jnp.zeros_like(states[:, constants.BLACK_CHANNEL_INDEX])))
     if komi:
-        states = states.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
+        states = states.at[0, constants.INVALID_CHANNEL_INDEX,
+                           komi[0], komi[1]].set(True)
 
     # Set passed
     states = states.at[0, constants.PASS_CHANNEL_INDEX].set(passed)

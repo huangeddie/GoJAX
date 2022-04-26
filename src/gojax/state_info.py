@@ -65,7 +65,7 @@ def get_empty_spaces(states):
     :param states: a batch array of N Go games.
     :return: an N x B x B boolean array.
     """
-    return ~jnp.sum(states[:, [constants.BLACKS_TURN, constants.WHITES_TURN]], axis=1, dtype=bool)
+    return ~jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITES_CHANNEL_INDEX]], axis=1, dtype=bool)
 
 
 def get_occupied_spaces(states):
@@ -75,4 +75,4 @@ def get_occupied_spaces(states):
     :param states: a batch array of N Go games.
     :return: an N x B x B boolean array.
     """
-    return jnp.sum(states[:, [constants.BLACKS_TURN, constants.WHITES_TURN]], axis=1, dtype=bool)
+    return jnp.sum(states[:, [constants.BLACKS_CHANNEL_INDEX, constants.WHITES_CHANNEL_INDEX]], axis=1, dtype=bool)

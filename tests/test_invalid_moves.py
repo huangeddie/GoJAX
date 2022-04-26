@@ -1,14 +1,15 @@
 import unittest
 
+import numpy as np
+from gojax import constants, go
 from jax import numpy as jnp
-
-from gojax import go, constants
 
 
 class InvalidMovesTestCase(unittest.TestCase):
     def test_space_occupied_by_opponent_pieces(self):
         state = go.new_states(2)
-        next_state = go.next_states(state, go.to_indicator_actions([(0, 0)], state))
+        next_state = go.next_states(
+            state, go.to_indicator_actions([(0, 0)], state))
         self.assertTrue(next_state[0, constants.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_space_occupied_by_own_pieces(self):
@@ -60,7 +61,8 @@ class InvalidMovesTestCase(unittest.TestCase):
         state = go.decode_state(state_str, constants.BLACKS_TURN)
         action1d = 0
         my_killed_pieces = jnp.zeros((1, 4, 4), dtype=bool)
-        self.assertFalse(go.compute_actions_are_invalid(state, action1d, my_killed_pieces))
+        self.assertFalse(go.compute_actions_are_invalid(
+            state, action1d, my_killed_pieces))
 
     def test_get_action_is_invalid_komi(self):
         state_str = """
@@ -75,7 +77,8 @@ class InvalidMovesTestCase(unittest.TestCase):
                                        [False, False, True, False],
                                        [False, False, False, False],
                                        [False, False, False, False]]])
-        self.assertTrue(go.compute_actions_are_invalid(state, action1d, my_killed_pieces))
+        self.assertTrue(go.compute_actions_are_invalid(
+            state, action1d, my_killed_pieces))
 
     def test_komi(self):
         state_str = """
@@ -85,8 +88,25 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = go.decode_state(state_str, constants.BLACKS_TURN)
-        next_state = go.next_states(state, go.to_indicator_actions([(1, 2)], state))
+        next_state = go.next_states(
+            state, go.to_indicator_actions([(1, 2)], state))
         self.assertTrue(next_state[:, constants.INVALID_CHANNEL_INDEX, 1, 1])
+
+    def test_invalid_move_no_op_pieces(self):
+        state = go.decode_state("""
+                                _ _ _
+                                _ W _
+                                _ _ _
+                                """,
+                                constants.BLACKS_TURN)
+        next_state = go.next_states(
+            state, go.to_indicator_actions([(1, 1)], state))
+        np.testing.assert_array_equal(state[0, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
+                                      next_state[0, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]])
+        np.testing.assert_array_equal(
+            go.get_turns(state), [constants.BLACKS_TURN])
+        np.testing.assert_array_equal(go.get_turns(
+            next_state), [constants.WHITES_TURN])
 
 
 if __name__ == '__main__':

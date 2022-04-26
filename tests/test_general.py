@@ -2,10 +2,9 @@ import unittest
 
 import jax.numpy as jnp
 import numpy as np
-from jax import lax
-
 from gojax import constants
 from gojax import go
+from jax import lax
 
 
 class GeneralTestCase(unittest.TestCase):
@@ -331,7 +330,7 @@ class GeneralTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = go.decode_state(state_str)
-        expected_str = open('tests/expected_pretty_string.txt', 'r').read()
+        expected_str = open('expected_pretty_string.txt', 'r').read()
         self.assertEqual(expected_str, go.get_pretty_string(state[0]))
 
     def test_compute_areas_pieces(self):

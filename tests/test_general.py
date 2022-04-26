@@ -112,7 +112,7 @@ class GeneralTestCase(unittest.TestCase):
         state = go.next_states(state, go.to_indicator_actions([None], state))
         self.assertTrue(jnp.alltrue(lax.eq(state[0, constants.END_CHANNEL_INDEX],
                                            jnp.ones_like(state[0, constants.END_CHANNEL_INDEX]))))
-    
+
     def test_game_end_no_op_pieces(self):
         state = go.decode_state("""
                                 _ _ _
@@ -128,6 +128,32 @@ class GeneralTestCase(unittest.TestCase):
         np.testing.assert_array_equal(go.get_turns(next_state), [constants.WHITES_TURN])
         np.testing.assert_array_equal(go.get_ended(state), [True])
         np.testing.assert_array_equal(go.get_ended(next_state), [True])
+
+    def test_no_op_second_state(self):
+        first_state = go.decode_state("""
+                                      _ _ _
+                                      _ _ _
+                                      _ _ _
+                                      """)
+        second_state = go.decode_state("""
+                                       _ _ _
+                                       _ _ _
+                                       _ _ _
+                                       """,
+                                       ended=True)
+        states = jnp.concatenate((first_state, second_state), axis=0)
+        next_states = go.next_states(
+            states, go.to_indicator_actions([(0, 0), (0, 0)], states))
+        self.assertEqual(
+            jnp.sum(jnp.logical_xor(states[0, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
+                                    next_states[
+                                        0, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]])), 1)
+        np.testing.assert_array_equal(states[1, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
+                                      next_states[1, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]])
+        np.testing.assert_array_equal(go.get_turns(states), [constants.BLACKS_TURN, constants.BLACKS_TURN])
+        np.testing.assert_array_equal(go.get_turns(next_states), [constants.WHITES_TURN, constants.WHITES_TURN])
+        np.testing.assert_array_equal(go.get_ended(states), [False, True])
+        np.testing.assert_array_equal(go.get_ended(next_states), [False, True])
 
     def test_decode_state_shape(self):
         state_str = """

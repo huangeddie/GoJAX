@@ -3,9 +3,10 @@ import textwrap
 import jax
 import jax.numpy as jnp
 import jax.scipy as jsp
+from jax import lax
+
 from gojax import constants
 from gojax.state_info import get_pieces_per_turn, get_turns, get_invalids, get_ended, get_empty_spaces
-from jax import lax
 
 
 def new_states(board_size, batch_size=1):
@@ -16,8 +17,7 @@ def new_states(board_size, batch_size=1):
     :param batch_size: batch size (N).
     :return: An N x 6 x B x B JAX zero-array of representing new Go games.
     """
-    state = jnp.zeros((batch_size, constants.NUM_CHANNELS,
-                      board_size, board_size), dtype=bool)
+    state = jnp.zeros((batch_size, constants.NUM_CHANNELS, board_size, board_size), dtype=bool)
     return state
 
 
@@ -140,18 +140,14 @@ def compute_areas(states):
     :return: an N x 2 x B x B boolean array, where the 0th and 1st indices of the 2nd dimension represent the black and
     white areas respectively.
     """
-    swapped_pieces = states[:, (constants.WHITE_CHANNEL_INDEX,
-                                constants.BLACK_CHANNEL_INDEX)]
-    kernel = _get_cardinally_connected_kernel(jnp.ndim(swapped_pieces) - 2)
+    pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]
+    kernel = _get_cardinally_connected_kernel(jnp.ndim(pieces) - 2)
     empty_spaces = get_empty_spaces(states)
 
-    immediately_connected_to_pieces = jnp.logical_and(jsp.signal.convolve(swapped_pieces, kernel, mode='same'),
+    immediately_connected_to_pieces = jnp.logical_and(jsp.signal.convolve(pieces, kernel, mode='same'),
                                                       empty_spaces)
-    connected_to_pieces = _paint_fill(
-        immediately_connected_to_pieces, empty_spaces)
-    pieces = states[:, (constants.BLACK_CHANNEL_INDEX,
-                        constants.WHITE_CHANNEL_INDEX)]
-    return jnp.logical_or(jnp.logical_and(~connected_to_pieces, empty_spaces), pieces)
+    connected_to_pieces = _paint_fill(immediately_connected_to_pieces, empty_spaces)
+    return jnp.logical_or(jnp.logical_and(connected_to_pieces, ~connected_to_pieces[:, ::-1]), pieces)
 
 
 def compute_area_sizes(states):

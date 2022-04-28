@@ -1,9 +1,10 @@
 import unittest
 
-import gojax
 import jax.numpy as jnp
 import numpy as np
 from jax import lax
+
+import gojax
 
 
 class GeneralTestCase(unittest.TestCase):
@@ -362,6 +363,19 @@ class GeneralTestCase(unittest.TestCase):
         expected_str = open('expected_pretty_string.txt', 'r').read()
         self.assertEqual(expected_str, gojax.get_pretty_string(state[0]))
 
+    def test_compute_areas_empty(self):
+        state = gojax.decode_state("""
+                                    _ _ _
+                                    _ _ _
+                                    _ _ _
+                                    """)
+        np.testing.assert_array_equal(gojax.compute_areas(state), [[[[False, False, False],
+                                                                     [False, False, False],
+                                                                     [False, False, False]],
+                                                                    [[False, False, False],
+                                                                     [False, False, False],
+                                                                     [False, False, False]]]])
+
     def test_compute_areas_pieces(self):
         state_str = """
                     B _ _
@@ -413,6 +427,32 @@ class GeneralTestCase(unittest.TestCase):
                                                 [False, False, False, False, False],
                                                 [False, False, False, False, False]]]])
 
+    def test_compute_areas_batch_size_two(self):
+        states = jnp.concatenate((gojax.decode_state("""
+                                                    _ _ _
+                                                    _ _ _
+                                                    _ _ _
+                                                    """),
+                                  gojax.decode_state("""
+                                                    _ _ _
+                                                    _ B _
+                                                    _ _ _
+                                                    """)), axis=0)
+
+        np.testing.assert_array_equal(gojax.compute_areas(states), [[[[False, False, False],
+                                                                      [False, False, False],
+                                                                      [False, False, False]],
+                                                                     [[False, False, False],
+                                                                      [False, False, False],
+                                                                      [False, False, False]]],
+                                                                    [[[True, True, True],
+                                                                      [True, True, True],
+                                                                      [True, True, True]],
+                                                                     [[False, False, False],
+                                                                      [False, False, False],
+                                                                      [False, False, False]]]
+                                                                    ])
+
     def test_compute_area_sizes_pieces(self):
         state = gojax.decode_state("""
                                 B _ _
@@ -438,6 +478,19 @@ class GeneralTestCase(unittest.TestCase):
                                 _ _ _ _ _
                                 """)
         np.testing.assert_array_equal(gojax.compute_area_sizes(state), [[5, 1]])
+
+    def test_compute_area_sizes_batch_size_two(self):
+        states = jnp.concatenate((gojax.decode_state("""
+                                                    _ _ _
+                                                    _ _ _
+                                                    _ _ _
+                                                    """),
+                                  gojax.decode_state("""
+                                                    _ _ _
+                                                    _ B _
+                                                    _ _ _
+                                                    """)))
+        np.testing.assert_array_equal(gojax.compute_area_sizes(states), [[0, 0], [9, 0]])
 
     def test_compute_winning_new_state_tie(self):
         state = gojax.decode_state("""
@@ -480,6 +533,19 @@ class GeneralTestCase(unittest.TestCase):
                                 _ _ _ _ _
                                 """)
         np.testing.assert_array_equal(gojax.compute_winning(state), [1])
+
+    def test_compute_winning_batch_size_two(self):
+        states = jnp.concatenate((gojax.decode_state("""
+                                                    _ _ _
+                                                    _ _ _
+                                                    _ _ _
+                                                    """),
+                                  gojax.decode_state("""
+                                                    _ _ _
+                                                    _ B _
+                                                    _ _ _
+                                                    """)))
+        np.testing.assert_array_equal(gojax.compute_winning(states), [0, 1])
 
     def test_swap_perspectives_black_to_white(self):
         state = gojax.decode_state("""

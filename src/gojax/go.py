@@ -142,7 +142,7 @@ def compute_areas(states):
     """
     pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]
     kernel = _get_cardinally_connected_kernel(jnp.ndim(pieces) - 2)
-    empty_spaces = get_empty_spaces(states)
+    empty_spaces = get_empty_spaces(states, keepdims=True)
 
     immediately_connected_to_pieces = jnp.logical_and(jsp.signal.convolve(pieces, kernel, mode='same'),
                                                       empty_spaces)

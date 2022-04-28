@@ -1,5 +1,6 @@
-from gojax import constants
 from jax import numpy as jnp
+
+from gojax import constants
 
 
 def get_pieces_per_turn(states, turns):
@@ -58,14 +59,16 @@ def get_ended(states):
     return jnp.alltrue(states[:, constants.END_CHANNEL_INDEX], axis=(1, 2))
 
 
-def get_empty_spaces(states):
+def get_empty_spaces(states, keepdims=False):
     """
     Gets the empty spaces for each state.
 
     :param states: a batch array of N Go games.
-    :return: an N x B x B boolean array.
+    :param keepdims: Whether to keep the Go state channel dimension.
+    :return: an N x 1 x B x B boolean array.
     """
-    return ~jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]], axis=1, dtype=bool)
+    return ~jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]], axis=1, dtype=bool,
+                    keepdims=keepdims)
 
 
 def get_occupied_spaces(states):

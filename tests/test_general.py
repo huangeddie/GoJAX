@@ -1,5 +1,6 @@
 import unittest
 
+import chex
 import jax.numpy as jnp
 import numpy as np
 from jax import lax
@@ -284,6 +285,14 @@ class GeneralTestCase(unittest.TestCase):
                                                          [False, True, False, False],
                                                          [False, False, True, False]]])
 
+    def test_get_empty_spaces_shape_squeeze(self):
+        empty_spaces = gojax.get_empty_spaces(gojax.new_states(board_size=3))
+        chex.assert_shape(empty_spaces, (1, 3, 3))
+
+    def test_get_empty_spaces_shape_keepdims(self):
+        empty_spaces = gojax.get_empty_spaces(gojax.new_states(board_size=3), keepdims=True)
+        chex.assert_shape(empty_spaces, (1, 1, 3, 3))
+
     def test_get_empty_spaces(self):
         state_str = """
                     _ B _ _
@@ -453,6 +462,43 @@ class GeneralTestCase(unittest.TestCase):
                                                                       [False, False, False]]]
                                                                     ])
 
+    def test_compute_areas_batch_size_three(self):
+        states = jnp.concatenate((gojax.decode_state("""
+                                                    _ _ _
+                                                    _ _ _
+                                                    _ _ _
+                                                    """),
+                                  gojax.decode_state("""
+                                                    _ _ _
+                                                    _ B _
+                                                    _ _ _
+                                                    """),
+                                  gojax.decode_state("""
+                                                      _ _ _
+                                                      _ W _
+                                                      _ _ _
+                                                      """)))
+
+        np.testing.assert_array_equal(gojax.compute_areas(states), [[[[False, False, False],
+                                                                      [False, False, False],
+                                                                      [False, False, False]],
+                                                                     [[False, False, False],
+                                                                      [False, False, False],
+                                                                      [False, False, False]]],
+                                                                    [[[True, True, True],
+                                                                      [True, True, True],
+                                                                      [True, True, True]],
+                                                                     [[False, False, False],
+                                                                      [False, False, False],
+                                                                      [False, False, False]]],
+                                                                    [[[False, False, False],
+                                                                      [False, False, False],
+                                                                      [False, False, False]],
+                                                                     [[True, True, True],
+                                                                      [True, True, True],
+                                                                      [True, True, True]]]
+                                                                    ])
+
     def test_compute_area_sizes_pieces(self):
         state = gojax.decode_state("""
                                 B _ _
@@ -491,6 +537,24 @@ class GeneralTestCase(unittest.TestCase):
                                                     _ _ _
                                                     """)))
         np.testing.assert_array_equal(gojax.compute_area_sizes(states), [[0, 0], [9, 0]])
+
+    def test_compute_area_sizes_batch_size_three(self):
+        states = jnp.concatenate((gojax.decode_state("""
+                                                    _ _ _
+                                                    _ _ _
+                                                    _ _ _
+                                                    """),
+                                  gojax.decode_state("""
+                                                    _ _ _
+                                                    _ B _
+                                                    _ _ _
+                                                    """),
+                                  gojax.decode_state("""
+                                                      _ _ _
+                                                      _ W _
+                                                      _ _ _
+                                                      """)))
+        np.testing.assert_array_equal(gojax.compute_area_sizes(states), [[0, 0], [9, 0], [0, 9]])
 
     def test_compute_winning_new_state_tie(self):
         state = gojax.decode_state("""

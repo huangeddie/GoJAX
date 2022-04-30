@@ -430,9 +430,7 @@ def get_pretty_string(state):
                         board_str += '┼─'
         board_str += '\n'
 
-    # TODO: Include empty spaces surrounded by either all black or all white pieces.
-    black_area, white_area = jnp.sum(state[constants.BLACK_CHANNEL_INDEX]), jnp.sum(
-        state[constants.WHITE_CHANNEL_INDEX])
+    areas = compute_area_sizes(jnp.expand_dims(state, 0))
     done = jnp.alltrue(state[constants.END_CHANNEL_INDEX])
     previous_player_passed = jnp.alltrue(state[constants.PASS_CHANNEL_INDEX])
     turn = jnp.alltrue(state[constants.TURN_CHANNEL_INDEX])
@@ -443,5 +441,5 @@ def get_pretty_string(state):
     else:
         game_state = 'ONGOING'
     board_str += f"\tTurn: {'BLACK' if turn == 0 else 'WHITE'}, Game State: {game_state}\n"
-    board_str += f'\tBlack Area: {black_area}, White Area: {white_area}\n'
+    board_str += f'\tBlack Area: {areas[0, 0]}, White Area: {areas[0, 1]}\n'
     return board_str

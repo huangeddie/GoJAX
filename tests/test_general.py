@@ -369,7 +369,7 @@ class GeneralTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = gojax.decode_state(state_str)
-        expected_str = open('expected_pretty_string.txt', 'r').read()
+        expected_str = open('tests/expected_pretty_string.txt', 'r').read()
         self.assertEqual(expected_str, gojax.get_pretty_string(state[0]))
 
     def test_compute_areas_empty(self):

@@ -1,3 +1,5 @@
+"""Main Go game functions."""
+
 import textwrap
 
 import jax
@@ -6,7 +8,7 @@ import jax.scipy as jsp
 from jax import lax
 
 from gojax import constants
-from gojax.state_info import get_pieces_per_turn, get_turns, get_invalids, get_ended, get_empty_spaces
+from gojax import state_info
 
 
 def new_states(board_size, batch_size=1):
@@ -47,7 +49,8 @@ def at_location_per_turn(states, turns, row, col):
     :return: a scalar update reference.
     """
     return states.at[
-        jnp.arange(states.shape[0]), jnp.array(turns, dtype=int), jnp.full(states.shape[0], row), jnp.full(
+        jnp.arange(states.shape[0]), jnp.array(turns, dtype=int), jnp.full(states.shape[0],
+                                                                           row), jnp.full(
             states.shape[0], col)]
 
 
@@ -55,7 +58,8 @@ def to_indicator_actions(actions, states):
     """
     Converts a list of actions into their sparse indicator array form.
 
-    :param actions: a list of N actions. Each element is either pass (None), or a tuple of integers representing a row,
+    :param actions: a list of N actions. Each element is either pass (None), or a tuple of
+    integers representing a row,
     column coordinate.
     :param states: a batch array of N Go games.
     :return: a (N x B x B) sparse array representing indicator actions for each state.
@@ -76,7 +80,8 @@ def _paint_fill(seeds, areas):
 
     Analogous to the Microsoft paint fill feature.
 
-    Note that the seeds must intersect a location of an area in order to fill it. It cannot be adjacent to an area.
+    Note that the seeds must intersect a location of an area in order to fill it. It cannot be
+    adjacent to an area.
 
     :param seeds: an (xN)* x B x B boolean array where the True entries are the seeds.
     :param areas: an (xN)* x B x B boolean array where the True entries are areas.
@@ -87,19 +92,23 @@ def _paint_fill(seeds, areas):
         jsp.signal.convolve(seeds, kernel, mode='same'), areas)
     last_two_expansions = jnp.stack([seeds, second_expansion], axis=0)
 
-    def _last_expansion_no_change(x):
-        return jnp.any(x[0] != x[1])
+    def _last_expansion_no_change(last_two_expansions_):
+        return jnp.any(last_two_expansions_[0] != last_two_expansions_[1])
 
-    def _expand(x):
-        x = x.at[0].set(x[1])  # Copy the second state to the first state
-        return x.at[1].set(jnp.logical_and(jsp.signal.convolve(x[1], kernel, mode='same'), areas))
+    def _expand(last_two_expansions_):
+        last_two_expansions_ = last_two_expansions_.at[0].set(
+            last_two_expansions_[1])  # Copy the second state to the first state
+        return last_two_expansions_.at[1].set(
+            jnp.logical_and(jsp.signal.convolve(last_two_expansions_[1], kernel, mode='same'),
+                            areas))
 
     return lax.while_loop(_last_expansion_no_change, _expand, last_two_expansions)[1]
 
 
 def _get_cardinally_connected_kernel(num_extra_dims):
     """
-    Returns a kernel used to in convolution used to expand a batch of 2D boolean arrays in all four cardinal directions.
+    Returns a kernel used to in convolution used to expand a batch of 2D boolean arrays in all
+    four cardinal directions.
 
     :param num_extra_dims: the number of extra dimensions before the 2D canvas.
     :return: an x[num_extra_dims] x 3 x 3 boolean array.
@@ -120,8 +129,8 @@ def compute_free_groups(states, turns):
     :param turns: a boolean array of length N.
     :return: an N x B x B boolean array.
     """
-    pieces = get_pieces_per_turn(states, turns)
-    empty_spaces = get_empty_spaces(states)
+    pieces = state_info.get_pieces_per_turn(states, turns)
+    empty_spaces = state_info.get_empty_spaces(states)
     kernel = _get_cardinally_connected_kernel(jnp.ndim(pieces) - 2)
     immediate_free_pieces = jnp.logical_and(
         jsp.signal.convolve(empty_spaces, kernel, mode='same'), pieces)
@@ -133,26 +142,32 @@ def compute_areas(states):
     """
     Compute the black and white areas of the states.
 
-    An area is defined as the set of points where the point is either the player's piece or part of an empty group that
-    is completely surrounded by the player's pieces (i.e. is not adjacent to any of the opponent's pieces).
+    An area is defined as the set of points where the point is either the player's piece or part
+    of an empty group that
+    is completely surrounded by the player's pieces (i.e. is not adjacent to any of the
+    opponent's pieces).
 
     :param states: a batch array of N Go games.
-    :return: an N x 2 x B x B boolean array, where the 0th and 1st indices of the 2nd dimension represent the black and
+    :return: an N x 2 x B x B boolean array, where the 0th and 1st indices of the 2nd dimension
+    represent the black and
     white areas respectively.
     """
     pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]
     kernel = _get_cardinally_connected_kernel(jnp.ndim(pieces) - 2)
-    empty_spaces = get_empty_spaces(states, keepdims=True)
+    empty_spaces = state_info.get_empty_spaces(states, keepdims=True)
 
-    immediately_connected_to_pieces = jnp.logical_and(jsp.signal.convolve(pieces, kernel, mode='same'),
-                                                      empty_spaces)
+    immediately_connected_to_pieces = jnp.logical_and(
+        jsp.signal.convolve(pieces, kernel, mode='same'),
+        empty_spaces)
     connected_to_pieces = _paint_fill(immediately_connected_to_pieces, empty_spaces)
-    return jnp.logical_or(jnp.logical_and(connected_to_pieces, ~connected_to_pieces[:, ::-1]), pieces)
+    return jnp.logical_or(jnp.logical_and(connected_to_pieces, ~connected_to_pieces[:, ::-1]),
+                          pieces)
 
 
 def compute_area_sizes(states):
     """
-    Compute the size of the black and white areas (i.e. the number of pieces and empty spaces controlled by each player).
+    Compute the size of the black and white areas (i.e. the number of pieces and empty spaces
+    controlled by each player).
 
     :param states: a batch array of N Go games.
     :return: an N x 2 integer array.
@@ -171,7 +186,8 @@ def compute_winning(states):
     :param states: a batch array of N Go games.
     :return: an N integer array.
     """
-    return lax.clamp(-1, -jnp.squeeze(jnp.diff(jnp.sum(compute_areas(states), axis=(2, 3))), axis=1), 1)
+    return lax.clamp(-1,
+                     -jnp.squeeze(jnp.diff(jnp.sum(compute_areas(states), axis=(2, 3))), axis=1), 1)
 
 
 def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
@@ -185,35 +201,38 @@ def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
 
     Komi is defined as a special type of invalid move where the following criteria are met:
     • The previous move by the opponent killed exactly one of our pieces.
-    • The move would 'revive' said single killed piece, that is the move is the same location where our piece died.
+    • The move would 'revive' said single killed piece, that is the move is the same location
+    where our piece died.
     • The move would kill exactly one of the opponent's pieces.
 
     :param states: a batch array of N Go games.
-    :param action_1d: 1D action index. For a given action `(row, col)` in a Go game with board size `B`, the 1D form of
-    the action would be `row x B + col`. The actions are in 1D form so that this function can be `jax.vmap`-ed.
-    :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the previous state.
+    :param action_1d: 1D action index. For a given action `(row, col)` in a Go game with board
+    size `B`, the 1D form of
+    the action would be `row x B + col`. The actions are in 1D form so that this function can be
+    `jax.vmap`-ed.
+    :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the
+    previous state.
     :return: a boolean array of length N indicating whether the moves are invalid.
     """
     row = jnp.floor_divide(action_1d, states.shape[2])
     col = jnp.remainder(action_1d, states.shape[3])
-    turns = get_turns(states)
+    turns = state_info.get_turns(states)
     opponents = ~turns
     ghost_next_states = at_location_per_turn(states, turns, row, col).set(True)
     ghost_maybe_kill = at_pieces_per_turn(ghost_next_states, opponents).set(
         compute_free_groups(ghost_next_states, opponents))
-    ghost_killed = jnp.logical_xor(get_pieces_per_turn(ghost_next_states, opponents),
-                                   get_pieces_per_turn(ghost_maybe_kill, opponents))
+    ghost_killed = jnp.logical_xor(state_info.get_pieces_per_turn(ghost_next_states, opponents),
+                                   state_info.get_pieces_per_turn(ghost_maybe_kill, opponents))
     num_casualties = jnp.sum(my_killed_pieces, axis=(1, 2))
-    single_casualties = num_casualties == jnp.ones_like(num_casualties)
-    move_is_revival = my_killed_pieces[:, row, col]
     num_ghost_kills = jnp.sum(ghost_killed, axis=(1, 2))
-    single_ghost_kills = num_ghost_kills == jnp.ones_like(num_ghost_kills)
-    komi = single_ghost_kills & move_is_revival & single_casualties
-    occupied = jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX], row, col],
-                       dtype=bool)
+    komi = (num_ghost_kills == jnp.ones_like(num_ghost_kills)) & my_killed_pieces[:, row, col] & (
+            num_casualties == jnp.ones_like(num_casualties))
+    occupied = jnp.sum(
+        states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX], row, col],
+        dtype=bool)
     no_liberties = jnp.sum(
         jnp.logical_xor(compute_free_groups(ghost_maybe_kill, turns),
-                        get_pieces_per_turn(ghost_maybe_kill, turns)),
+                        state_info.get_pieces_per_turn(ghost_maybe_kill, turns)),
         axis=(1, 2), dtype=bool)
     return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi)
 
@@ -223,13 +242,15 @@ def compute_invalid_actions(states, my_killed_pieces):
     Computes the invalid moves for the turns of each state.
 
     :param states: a batch of N Go games.
-    :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the previous state.
+    :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the
+    previous state.
     :return: an N x B x B indicator array of invalid moves.
     """
 
     invalid_moves = jax.vmap(compute_actions_are_invalid, (None, 0, None), 1)(states,
                                                                               jnp.arange(
-                                                                                  states.shape[2] * states.shape[3]),
+                                                                                  states.shape[2] *
+                                                                                  states.shape[3]),
                                                                               my_killed_pieces)
     return jnp.reshape(invalid_moves, (states.shape[0], states.shape[2], states.shape[3]))
 
@@ -240,11 +261,12 @@ def _move_is_invalid(states, indicator_actions):
 
     :param states: a batch array of N Go games.
     :param indicator_actions: A (N x B x B) indicator array. For each state
-    in the batch, there should be at most one non-zero element representing the move. If all elements are 0,
+    in the batch, there should be at most one non-zero element representing the move. If all
+    elements are 0,
     then it's considered a pass.
     :return: a boolean array of length N.
     """
-    return jnp.sum(get_invalids(states) & indicator_actions, axis=(1, 2), dtype=bool)
+    return jnp.sum(state_info.get_invalids(states) & indicator_actions, axis=(1, 2), dtype=bool)
 
 
 def next_states(states, indicator_actions):
@@ -253,25 +275,28 @@ def next_states(states, indicator_actions):
 
     :param states: a batch array of N Go games.
     :param indicator_actions: A (N x B x B) indicator array. For each state
-    in the batch, there should be at most one non-zero element representing the move. If all elements are 0,
+    in the batch, there should be at most one non-zero element representing the move. If all
+    elements are 0,
     then it's considered a pass.
     :return: an N x C x B x B boolean array.
     """
     # Get the players
-    turns = get_turns(states)
+    turns = state_info.get_turns(states)
     opponents = ~turns
 
     # Change the turn
     states = _change_turns(states)
 
-    # Save the current state after changing the turn because we may need to revert back to this checkpoint for some of them.
+    # Save the current state after changing the turn because we may need to revert back to this
+    # checkpoint for some of
+    # them.
     checkpoint_states = states
 
     # Add the piece
     states = at_pieces_per_turn(states, turns).max(indicator_actions)
 
     # Remove trapped pieces
-    kill_pieces = jnp.logical_xor(get_pieces_per_turn(
+    kill_pieces = jnp.logical_xor(state_info.get_pieces_per_turn(
         states, opponents), compute_free_groups(states, opponents))
     states = at_pieces_per_turn(states, opponents).set(
         compute_free_groups(states, opponents))
@@ -293,7 +318,7 @@ def next_states(states, indicator_actions):
         previously_passed & passed)
 
     # Revert back to original state if the original state already ended or the action is invalid
-    states = jnp.where(jnp.expand_dims(get_ended(checkpoint_states) | _move_is_invalid(
+    states = jnp.where(jnp.expand_dims(state_info.get_ended(checkpoint_states) | _move_is_invalid(
         checkpoint_states, indicator_actions), (1, 2, 3)), checkpoint_states, states)
 
     return states
@@ -316,12 +341,14 @@ def swap_perspectives(states):
     :param states: a batch array of N Go games.
     :return: a boolean array with the same shape as states.
     """
-    swapped_pieces = states.at[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]].set(
+    swapped_pieces = states.at[:,
+                     [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]].set(
         states[:, [constants.WHITE_CHANNEL_INDEX, constants.BLACK_CHANNEL_INDEX]])
     return _change_turns(swapped_pieces)
 
 
-def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bool = False, komi=None,
+def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bool = False,
+                 komi=None,
                  ended: bool = False):
     """
     Creates a game board from the human-readable encoded string.
@@ -375,6 +402,32 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
     return states
 
 
+def _get_second_character_go_pretty_string(i, j, size):
+    """Returns the corresponding second character for the given position on the Go board."""
+    if i == 0:
+        if j == 0:
+            character = '╔'
+        elif j == size - 1:
+            character = '╗'
+        else:
+            character = '╤'
+    elif i == size - 1:
+        if j == 0:
+            character = '╚'
+        elif j == size - 1:
+            character = '╝'
+        else:
+            character = '╧'
+    else:
+        if j == 0:
+            character = '╟'
+        elif j == size - 1:
+            character = '╢'
+        else:
+            character = '┼'
+    return character
+
+
 def get_pretty_string(state):
     """
     Creates a human-friendly string of the given state.
@@ -387,47 +440,25 @@ def get_pretty_string(state):
     size = state.shape[1]
     board_str += '\t'
     for i in range(size):
-        board_str += '{}'.format(i).ljust(2, ' ')
+        board_str += f'{i}'.ljust(2, ' ')
     board_str += '\n'
     for i in range(size):
-        board_str += '{}\t'.format(i)
+        board_str += f'{i}\t'
         for j in range(size):
-            if state[0, i, j] == 1:
+            # First character
+            if state[constants.BLACK_CHANNEL_INDEX, i, j]:
                 board_str += '○'
-                if j != size - 1:
-                    if i == 0 or i == size - 1:
-                        board_str += '═'
-                    else:
-                        board_str += '─'
-            elif state[1, i, j] == 1:
+            elif state[constants.WHITE_CHANNEL_INDEX, i, j]:
                 board_str += '●'
-                if j != size - 1:
-                    if i == 0 or i == size - 1:
-                        board_str += '═'
-                    else:
-                        board_str += '─'
             else:
-                if i == 0:
-                    if j == 0:
-                        board_str += '╔═'
-                    elif j == size - 1:
-                        board_str += '╗'
-                    else:
-                        board_str += '╤═'
-                elif i == size - 1:
-                    if j == 0:
-                        board_str += '╚═'
-                    elif j == size - 1:
-                        board_str += '╝'
-                    else:
-                        board_str += '╧═'
+                board_str += _get_second_character_go_pretty_string(i, j, size)
+
+            # Second character
+            if j != size - 1:
+                if i in (0, size - 1):
+                    board_str += '═'
                 else:
-                    if j == 0:
-                        board_str += '╟─'
-                    elif j == size - 1:
-                        board_str += '╢'
-                    else:
-                        board_str += '┼─'
+                    board_str += '─'
         board_str += '\n'
 
     areas = compute_area_sizes(jnp.expand_dims(state, 0))

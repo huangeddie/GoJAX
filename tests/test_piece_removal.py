@@ -1,10 +1,22 @@
+"""
+Tests Go piece removal logic.
+
+Piece removal is arguably the more complicated part of the Go game logic, so we decided it
+deserved its own dedicated test file.
+"""
+
+# pylint: disable=missing-function-docstring,too-many-public-methods,no-self-use,duplicate-code
+
 import unittest
 
-import gojax
 import jax.numpy as jnp
+
+import gojax
 
 
 class PieceRemovalTestCase(unittest.TestCase):
+    """Tests Go piece removal logic."""
+
     def test_single_piece(self):
         state_str = """
                     W _ _ _
@@ -38,10 +50,12 @@ class PieceRemovalTestCase(unittest.TestCase):
         next_state = gojax.next_states(state, gojax.to_indicator_actions([(0, 2)], state))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.WHITE_CHANNEL_INDEX]))
         self.assertTrue(
-            jnp.alltrue(next_state[0, gojax.BLACK_CHANNEL_INDEX] == jnp.array([[False, False, True, False],
-                                                                               [True, True, False, False],
-                                                                               [False, False, False, False],
-                                                                               [False, False, False, False]])),
+            jnp.alltrue(
+                next_state[0, gojax.BLACK_CHANNEL_INDEX] == jnp.array([[False, False, True, False],
+                                                                       [True, True, False, False],
+                                                                       [False, False, False, False],
+                                                                       [False, False, False,
+                                                                        False]])),
             next_state[0, gojax.BLACK_CHANNEL_INDEX])
 
     def test_two_disjoint_pieces(self):
@@ -55,10 +69,12 @@ class PieceRemovalTestCase(unittest.TestCase):
         next_state = gojax.next_states(state, gojax.to_indicator_actions([(0, 1)], state))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.WHITE_CHANNEL_INDEX]))
         self.assertTrue(
-            jnp.alltrue(next_state[0, gojax.BLACK_CHANNEL_INDEX] == jnp.array([[False, True, False, True],
-                                                                               [True, False, True, False],
-                                                                               [False, False, False, False],
-                                                                               [False, False, False, False]])))
+            jnp.alltrue(
+                next_state[0, gojax.BLACK_CHANNEL_INDEX] == jnp.array([[False, True, False, True],
+                                                                       [True, False, True, False],
+                                                                       [False, False, False, False],
+                                                                       [False, False, False,
+                                                                        False]])))
 
     def test_donut(self):
         state_str = """
@@ -71,10 +87,11 @@ class PieceRemovalTestCase(unittest.TestCase):
         next_state = gojax.next_states(state, gojax.to_indicator_actions([(1, 1)], state))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.BLACK_CHANNEL_INDEX]))
         self.assertTrue(
-            jnp.alltrue(next_state[0, gojax.WHITE_CHANNEL_INDEX] == jnp.array([[False, False, False, True],
-                                                                               [False, True, False, True],
-                                                                               [False, False, False, True],
-                                                                               [True, True, True, False]])))
+            jnp.alltrue(
+                next_state[0, gojax.WHITE_CHANNEL_INDEX] == jnp.array([[False, False, False, True],
+                                                                       [False, True, False, True],
+                                                                       [False, False, False, True],
+                                                                       [True, True, True, False]])))
 
 
 if __name__ == '__main__':

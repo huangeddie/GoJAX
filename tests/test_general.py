@@ -1,3 +1,7 @@
+"""Tests general Go functions."""
+
+# pylint: disable=missing-function-docstring,too-many-public-methods,no-self-use,duplicate-code
+
 import unittest
 
 import chex
@@ -9,6 +13,8 @@ import gojax
 
 
 class GeneralTestCase(unittest.TestCase):
+    """Tests general Go functions."""
+
     def test_new_state_default_single_batch_size(self):
         state = gojax.new_states(4)
         self.assertEqual(state.shape, (1, gojax.NUM_CHANNELS, 4, 4))
@@ -125,8 +131,9 @@ class GeneralTestCase(unittest.TestCase):
                                    ended=True)
         next_state = gojax.next_states(
             state, gojax.to_indicator_actions([(1, 1)], state))
-        np.testing.assert_array_equal(state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
-                                      next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
+        np.testing.assert_array_equal(
+            state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
+            next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
         np.testing.assert_array_equal(gojax.get_turns(state), [gojax.BLACKS_TURN])
         np.testing.assert_array_equal(gojax.get_turns(next_state), [gojax.WHITES_TURN])
         np.testing.assert_array_equal(gojax.get_ended(state), [True])
@@ -148,11 +155,13 @@ class GeneralTestCase(unittest.TestCase):
         next_states = gojax.next_states(
             states, gojax.to_indicator_actions([(0, 0), (0, 0)], states))
         self.assertEqual(
-            jnp.sum(jnp.logical_xor(states[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
-                                    next_states[
-                                        0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])), 1)
-        np.testing.assert_array_equal(states[1, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
-                                      next_states[1, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
+            jnp.sum(
+                jnp.logical_xor(states[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
+                                next_states[
+                                    0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])), 1)
+        np.testing.assert_array_equal(
+            states[1, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
+            next_states[1, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
         np.testing.assert_array_equal(gojax.get_turns(states),
                                       [gojax.BLACKS_TURN, gojax.BLACKS_TURN])
         np.testing.assert_array_equal(gojax.get_turns(next_states),
@@ -323,7 +332,8 @@ class GeneralTestCase(unittest.TestCase):
                     """
         state = gojax.decode_state(state_str)
         free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
-        self.assertTrue(jnp.alltrue(jnp.array([[True, False], [False, False]]) == free_black_groups))
+        self.assertTrue(
+            jnp.alltrue(jnp.array([[True, False], [False, False]]) == free_black_groups))
 
     def test_get_free_groups_non_free_single_piece(self):
         state_str = """
@@ -332,8 +342,9 @@ class GeneralTestCase(unittest.TestCase):
                     """
         state = gojax.decode_state(state_str)
         free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
-        self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, False]]) == free_black_groups),
-                        free_black_groups)
+        self.assertTrue(
+            jnp.alltrue(jnp.array([[False, False], [False, False]]) == free_black_groups),
+            free_black_groups)
 
     def test_get_free_groups_free_chain(self):
         state_str = """
@@ -349,7 +360,8 @@ class GeneralTestCase(unittest.TestCase):
                                                [False, True, False, False, False],
                                                [False, True, False, False, False],
                                                [False, True, False, False, False],
-                                               [False, False, False, False, False], ]) == free_black_groups),
+                                               [False, False, False, False,
+                                                False], ]) == free_black_groups),
                         free_black_groups)
 
     def test_get_free_groups_white(self):
@@ -369,7 +381,8 @@ class GeneralTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = gojax.decode_state(state_str)
-        expected_str = open('tests/expected_pretty_string.txt', 'r').read()
+        with open('tests/expected_pretty_string.txt', 'r', encoding='utf8') as file:
+            expected_str = file.read()
         self.assertEqual(expected_str, gojax.get_pretty_string(state[0]))
 
     def test_compute_areas_empty(self):
@@ -618,12 +631,14 @@ class GeneralTestCase(unittest.TestCase):
                                 _ _ W
                                 """, turn=gojax.BLACKS_TURN)
         swapped_perspective = gojax.swap_perspectives(state)
-        np.testing.assert_array_equal(swapped_perspective[0, gojax.BLACK_CHANNEL_INDEX], [[False, False, False],
-                                                                                          [False, False, False],
-                                                                                          [False, False, True]])
-        np.testing.assert_array_equal(swapped_perspective[0, gojax.WHITE_CHANNEL_INDEX], [[True, False, False],
-                                                                                          [False, False, False],
-                                                                                          [False, False, False]])
+        np.testing.assert_array_equal(swapped_perspective[0, gojax.BLACK_CHANNEL_INDEX],
+                                      [[False, False, False],
+                                       [False, False, False],
+                                       [False, False, True]])
+        np.testing.assert_array_equal(swapped_perspective[0, gojax.WHITE_CHANNEL_INDEX],
+                                      [[True, False, False],
+                                       [False, False, False],
+                                       [False, False, False]])
         np.testing.assert_array_equal(gojax.get_turns(swapped_perspective), [gojax.WHITES_TURN])
 
     def test_swap_perspectives_white_to_black(self):
@@ -633,12 +648,14 @@ class GeneralTestCase(unittest.TestCase):
                                 _ _ W
                                 """, turn=gojax.WHITES_TURN)
         swapped_perspective = gojax.swap_perspectives(state)
-        np.testing.assert_array_equal(swapped_perspective[0, gojax.BLACK_CHANNEL_INDEX], [[False, False, False],
-                                                                                          [False, False, False],
-                                                                                          [False, False, True]])
-        np.testing.assert_array_equal(swapped_perspective[0, gojax.WHITE_CHANNEL_INDEX], [[True, False, False],
-                                                                                          [False, False, False],
-                                                                                          [False, False, False]])
+        np.testing.assert_array_equal(swapped_perspective[0, gojax.BLACK_CHANNEL_INDEX],
+                                      [[False, False, False],
+                                       [False, False, False],
+                                       [False, False, True]])
+        np.testing.assert_array_equal(swapped_perspective[0, gojax.WHITE_CHANNEL_INDEX],
+                                      [[True, False, False],
+                                       [False, False, False],
+                                       [False, False, False]])
         np.testing.assert_array_equal(gojax.get_turns(swapped_perspective), [gojax.BLACKS_TURN])
 
     if __name__ == '__main__':

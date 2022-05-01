@@ -1,3 +1,5 @@
+"""Go constants."""
+
 BLACKS_TURN = False
 WHITES_TURN = True
 

@@ -1,11 +1,23 @@
+"""
+Tests Go invalid move logic.
+
+Computing invalid moves is arguably the more complicated part of the Go game logic, so we decided it
+deserved its own dedicated test file.
+"""
+
+# pylint: disable=missing-function-docstring,too-many-public-methods,no-self-use,duplicate-code
+
 import unittest
 
-import gojax
 import numpy as np
 from jax import numpy as jnp
 
+import gojax
+
 
 class InvalidMovesTestCase(unittest.TestCase):
+    """Tests Go invalid move logic."""
+
     def test_space_occupied_by_opponent_pieces(self):
         state = gojax.new_states(2)
         next_state = gojax.next_states(
@@ -101,8 +113,9 @@ class InvalidMovesTestCase(unittest.TestCase):
                                    gojax.BLACKS_TURN)
         next_state = gojax.next_states(
             state, gojax.to_indicator_actions([(1, 1)], state))
-        np.testing.assert_array_equal(state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
-                                      next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
+        np.testing.assert_array_equal(
+            state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
+            next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
         np.testing.assert_array_equal(
             gojax.get_turns(state), [gojax.BLACKS_TURN])
         np.testing.assert_array_equal(gojax.get_turns(

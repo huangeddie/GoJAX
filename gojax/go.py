@@ -54,9 +54,9 @@ def at_location_per_turn(states, turns, row, col):
             states.shape[0], col)]
 
 
-def to_indicator_actions(actions, states):
+def action_indices_to_indicator(actions, states):
     """
-    Converts a list of actions into their sparse indicator array form.
+    Converts a list of action indices into their sparse indicator array form.
 
     :param actions: a list of N actions. Each element is either pass (None), or a tuple of
     integers representing a row,

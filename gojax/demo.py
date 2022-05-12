@@ -15,6 +15,6 @@ if __name__ == '__main__':
         if USER_INPUT:
             row, col = USER_INPUT.split()
             action = (int(row), int(col))
-        state = go.next_states(state, go.to_indicator_actions([action], state))
+        state = go.next_states(state, go.action_indices_to_indicator([action], state))
 
     print(go.get_pretty_string(state[0]))

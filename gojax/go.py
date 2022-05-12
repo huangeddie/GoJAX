@@ -5,10 +5,9 @@ import textwrap
 import jax
 import jax.numpy as jnp
 import jax.scipy as jsp
-from jax import lax
-
 from gojax import constants
 from gojax import state_info
+from jax import lax
 
 
 def new_states(board_size, batch_size=1):
@@ -244,7 +243,7 @@ def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
             num_casualties == jnp.ones_like(num_casualties))
     occupied = jnp.sum(
         states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX], row, col],
-        dtype=bool)
+        axis=1, dtype=bool)
     no_liberties = jnp.sum(
         jnp.logical_xor(compute_free_groups(ghost_maybe_kill, turns),
                         state_info.get_pieces_per_turn(ghost_maybe_kill, turns)),
@@ -403,7 +402,7 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
 
     # Set invalid moves
     states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
-        compute_invalid_actions(states, jnp.zeros_like(states[:, constants.BLACK_CHANNEL_INDEX])))
+        compute_invalid_actions(states, jnp.zeros_like(states[:, 0])))
     if komi:
         states = states.at[0, constants.INVALID_CHANNEL_INDEX,
                            komi[0], komi[1]].set(True)

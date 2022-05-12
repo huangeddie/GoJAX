@@ -5,12 +5,12 @@
 import unittest
 
 import chex
+import gojax
 import jax.numpy as jnp
 import numpy as np
 from absl.testing import parameterized
 from jax import lax
-
-import gojax
+from jax import nn
 
 
 class ActionIndicatorsToIndicesTestCase(chex.TestCase):
@@ -676,5 +676,104 @@ class GeneralTestCase(unittest.TestCase):
                                        [False, False, False]])
         np.testing.assert_array_equal(gojax.get_turns(swapped_perspective), [gojax.BLACKS_TURN])
 
-    if __name__ == '__main__':
-        unittest.main()
+    def test_next_two_states(self):
+        action_size = 2
+        board_size = 3
+        states = gojax.new_states(board_size, action_size)
+        indicator_actions = jnp.reshape(
+            nn.one_hot(jnp.arange(action_size), num_classes=board_size ** 2, dtype=bool),
+            (action_size, board_size, board_size))
+        children = gojax.next_states(states, indicator_actions)
+        expected_children = jnp.concatenate((gojax.decode_state("""
+                                                          B _ _
+                                                          _ _ _
+                                                          _ _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ B _
+                                                          _ _ _
+                                                          _ _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN)
+                                             ), axis=0)
+
+        np.testing.assert_array_equal(children, expected_children)
+
+    def test_get_all_children(self):
+        action_size = 10
+        board_size = 3
+        states = gojax.new_states(board_size, batch_size=action_size)
+        indicator_actions = jnp.reshape(
+            nn.one_hot(jnp.arange(action_size), num_classes=board_size ** 2, dtype=bool),
+            (action_size, board_size, board_size))
+        children = gojax.next_states(states, indicator_actions)
+        expected_children = jnp.concatenate((gojax.decode_state("""
+                                                          B _ _
+                                                          _ _ _
+                                                          _ _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ B _
+                                                          _ _ _
+                                                          _ _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ _ B
+                                                          _ _ _
+                                                          _ _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ _ _
+                                                          B _ _
+                                                          _ _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ _ _
+                                                          _ B _
+                                                          _ _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ _ _
+                                                          _ _ B
+                                                          _ _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ _ _
+                                                          _ _ _
+                                                          B _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ _ _
+                                                          _ _ _
+                                                          _ B _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ _ _
+                                                          _ _ _
+                                                          _ _ B
+                                                          """,
+                                                                turn=gojax.WHITES_TURN),
+                                             gojax.decode_state("""
+                                                          _ _ _
+                                                          _ _ _
+                                                          _ _ _
+                                                          """,
+                                                                turn=gojax.WHITES_TURN,
+                                                                passed=True),
+                                             )
+                                            )
+
+        np.testing.assert_array_equal(children, expected_children)
+
+
+if __name__ == '__main__':
+    unittest.main()

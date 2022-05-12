@@ -9,10 +9,9 @@ deserved its own dedicated test file.
 
 import unittest
 
+import gojax
 import numpy as np
 from jax import numpy as jnp
-
-import gojax
 
 
 class InvalidMovesTestCase(unittest.TestCase):
@@ -120,6 +119,30 @@ class InvalidMovesTestCase(unittest.TestCase):
             gojax.get_turns(state), [gojax.BLACKS_TURN])
         np.testing.assert_array_equal(gojax.get_turns(
             next_state), [gojax.WHITES_TURN])
+
+    def test_compute_invalid_actions_for_two_states(self):
+        states = jnp.concatenate((gojax.decode_state("""
+                                                          B _ _
+                                                          _ _ _
+                                                          _ _ _
+                                                          """,
+                                                     turn=gojax.WHITES_TURN),
+                                  gojax.decode_state("""
+                                                          _ B _
+                                                          _ _ _
+                                                          _ _ _
+                                                          """,
+                                                     turn=gojax.WHITES_TURN)
+                                  ), axis=0)
+        np.testing.assert_array_equal(
+            gojax.compute_invalid_actions(states, my_killed_pieces=jnp.zeros_like(states[:, 0])),
+            [[[True, False, False],
+              [False, False, False],
+              [False, False, False]],
+             [[False, True, False],
+              [False, False, False],
+              [False, False, False]]
+             ])
 
 
 if __name__ == '__main__':

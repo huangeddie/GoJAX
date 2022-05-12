@@ -21,13 +21,13 @@ class InvalidMovesTestCase(unittest.TestCase):
     def test_space_occupied_by_opponent_pieces(self):
         state = gojax.new_states(2)
         next_state = gojax.next_states(
-            state, gojax.action_indices_to_indicator([(0, 0)], state))
+            state, gojax.action_2d_indices_to_indicator([(0, 0)], state))
         self.assertTrue(next_state[0, gojax.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_space_occupied_by_own_pieces(self):
         state = gojax.new_states(2)
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([(0, 0)], state))
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([None], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(0, 0)], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([None], state))
         self.assertTrue(state[0, gojax.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_single_hole_no_liberties_manual_build(self):
@@ -38,9 +38,9 @@ class InvalidMovesTestCase(unittest.TestCase):
         _ _ _ _
         """
         state = gojax.new_states(4)
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([[0, 1]], state))
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([None], state))
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([[1, 0]], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([[0, 1]], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([None], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([[1, 0]], state))
         self.assertTrue(state[:, gojax.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_single_hole_no_liberties(self):
@@ -101,7 +101,7 @@ class InvalidMovesTestCase(unittest.TestCase):
                     """
         state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
         next_state = gojax.next_states(
-            state, gojax.action_indices_to_indicator([(1, 2)], state))
+            state, gojax.action_2d_indices_to_indicator([(1, 2)], state))
         self.assertTrue(next_state[:, gojax.INVALID_CHANNEL_INDEX, 1, 1])
 
     def test_invalid_move_no_op_pieces(self):
@@ -112,7 +112,7 @@ class InvalidMovesTestCase(unittest.TestCase):
                                 """,
                                    gojax.BLACKS_TURN)
         next_state = gojax.next_states(
-            state, gojax.action_indices_to_indicator([(1, 1)], state))
+            state, gojax.action_2d_indices_to_indicator([(1, 1)], state))
         np.testing.assert_array_equal(
             state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
             next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])

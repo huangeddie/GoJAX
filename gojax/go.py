@@ -54,9 +54,9 @@ def at_location_per_turn(states, turns, row, col):
             states.shape[0], col)]
 
 
-def action_indices_to_indicator(actions, states):
+def action_2d_indices_to_indicator(actions, states):
     """
-    Converts a list of action indices into their sparse indicator array form.
+    Converts an array of action indices into their sparse indicator array form.
 
     :param actions: a list of N actions. Each element is either pass (None), or a tuple of
     integers representing a row,
@@ -72,6 +72,21 @@ def action_indices_to_indicator(actions, states):
         indicator_actions = indicator_actions.at[i, action[0], action[1]].set(
             True)
     return indicator_actions
+
+
+def action_indicators_to_indices(indicator_actions):
+    """
+    Converts an array of indicator actions to their corresponding action indices.
+
+    :param indicator_actions: n (N x B x B) sparse array. If the values are present, the action
+    is a pass.
+    :return: an integer array of length N.
+    """
+    passes = ~jnp.sum(indicator_actions, axis=(1, 2), dtype=bool)
+    one_hot_actions = jnp.concatenate(
+        (jnp.reshape(indicator_actions, (len(indicator_actions), -1)), jnp.expand_dims(passes, 1)),
+        axis=1)
+    return jnp.argmax(one_hot_actions, axis=1)
 
 
 def _paint_fill(seeds, areas):

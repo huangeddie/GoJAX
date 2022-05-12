@@ -7,9 +7,26 @@ import unittest
 import chex
 import jax.numpy as jnp
 import numpy as np
+from absl.testing import parameterized
 from jax import lax
 
 import gojax
+
+
+class ActionIndicatorsToIndicesTestCase(chex.TestCase):
+    @parameterized.named_parameters(
+        ('pass', jnp.array([[[False, False],
+                             [False, False]]]), 4),
+        ('first_index', jnp.array([[[True, False],
+                                    [False, False]]]), 0),
+        ('pass_and_move', jnp.array([[[False, False],
+                                      [False, False]],
+                                     [[True, False],
+                                      [False, False]]]), (4, 0)),
+    )
+    def test(self, indicator_actions, expected_indices):
+        np.testing.assert_array_equal(gojax.action_indicators_to_indices(indicator_actions),
+                                      expected_indices)
 
 
 class GeneralTestCase(unittest.TestCase):
@@ -27,27 +44,27 @@ class GeneralTestCase(unittest.TestCase):
         state = gojax.new_states(4, batch_size=2)
         self.assertEqual(state.shape, (2, gojax.NUM_CHANNELS, 4, 4))
 
-    def test_to_indicator_actions_pass(self):
+    def test_action_2d_indices_to_indicator_pass(self):
         state = gojax.new_states(2)
-        indicator_moves = gojax.action_indices_to_indicator([None], state)
+        indicator_moves = gojax.action_2d_indices_to_indicator([None], state)
         self.assertTrue(jnp.alltrue(lax.eq(indicator_moves, jnp.zeros_like(indicator_moves))))
 
-    def test_to_indicator_actions_black_move(self):
+    def test_action_2d_indices_to_indicator_black_move(self):
         state = gojax.new_states(2)
-        indicator_actions = gojax.action_indices_to_indicator([(0, 0)], state)
+        indicator_actions = gojax.action_2d_indices_to_indicator([(0, 0)], state)
         self.assertTrue(jnp.alltrue(lax.eq(indicator_actions, jnp.array([[[True, False],
                                                                           [False, False]]]))))
 
-    def test_to_indicator_actions_white_move(self):
+    def test_action_2d_indices_to_indicator_white_move(self):
         state = gojax.new_states(2)
         state = state.at[0, 2].set(True)
-        indicator_actions = gojax.action_indices_to_indicator([(0, 0)], state)
+        indicator_actions = gojax.action_2d_indices_to_indicator([(0, 0)], state)
         self.assertTrue(jnp.alltrue(lax.eq(indicator_actions, jnp.array([[[True, False],
                                                                           [False, False]]]))))
 
-    def test_to_indicator_actions_pass_and_move(self):
+    def test_action_2d_indices_to_indicator_pass_and_move(self):
         states = gojax.new_states(2, batch_size=2)
-        indicator_moves = gojax.action_indices_to_indicator([None, (0, 0)], states)
+        indicator_moves = gojax.action_2d_indices_to_indicator([None, (0, 0)], states)
         self.assertTrue(jnp.alltrue(lax.eq(indicator_moves[0], jnp.zeros_like(indicator_moves[0]))))
         self.assertTrue(jnp.alltrue(lax.eq(indicator_moves[1], jnp.array([[True, False],
                                                                           [False, False]]))))
@@ -78,13 +95,13 @@ class GeneralTestCase(unittest.TestCase):
 
     def test_white_moves_second(self):
         state = gojax.new_states(4)
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([(0, 0)], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(0, 0)], state))
         self.assertTrue(jnp.alltrue(state[0, gojax.TURN_CHANNEL_INDEX]))
 
     def test_black_moves_third(self):
         state = gojax.new_states(4)
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([None], state))
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([None], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([None], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([None], state))
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.TURN_CHANNEL_INDEX],
                                jnp.zeros_like(state[0, gojax.TURN_CHANNEL_INDEX]))))
@@ -94,19 +111,20 @@ class GeneralTestCase(unittest.TestCase):
         states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
         self.assertTrue(jnp.alltrue(gojax.get_turns(states) == jnp.array([True, False])),
                         gojax.get_turns(states))
-        states = gojax.next_states(states, gojax.action_indices_to_indicator([None, None], states))
+        states = gojax.next_states(states,
+                                   gojax.action_2d_indices_to_indicator([None, None], states))
         self.assertTrue(jnp.alltrue(gojax.get_turns(states) == jnp.array([False, True])),
                         gojax.get_turns(states))
 
     def test_pass_changes_turn(self):
         state = gojax.new_states(2)
         self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([False])))
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([None], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([None], state))
         self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([True])))
 
     def test_pass_sets_pass_layer(self):
         state = gojax.new_states(2)
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([None], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([None], state))
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.PASS_CHANNEL_INDEX],
                                jnp.ones_like(state[0, gojax.PASS_CHANNEL_INDEX]))))
@@ -115,10 +133,10 @@ class GeneralTestCase(unittest.TestCase):
         state = gojax.new_states(2)
         self.assertTrue(jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX],
                                            jnp.zeros_like(state[0, gojax.END_CHANNEL_INDEX]))))
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([None], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([None], state))
         self.assertTrue(jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX],
                                            jnp.zeros_like(state[0, gojax.END_CHANNEL_INDEX]))))
-        state = gojax.next_states(state, gojax.action_indices_to_indicator([None], state))
+        state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([None], state))
         self.assertTrue(jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX],
                                            jnp.ones_like(state[0, gojax.END_CHANNEL_INDEX]))))
 
@@ -130,7 +148,7 @@ class GeneralTestCase(unittest.TestCase):
                                 """,
                                    ended=True)
         next_state = gojax.next_states(
-            state, gojax.action_indices_to_indicator([(1, 1)], state))
+            state, gojax.action_2d_indices_to_indicator([(1, 1)], state))
         np.testing.assert_array_equal(
             state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
             next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
@@ -153,7 +171,7 @@ class GeneralTestCase(unittest.TestCase):
                                           ended=True)
         states = jnp.concatenate((first_state, second_state), axis=0)
         next_states = gojax.next_states(
-            states, gojax.action_indices_to_indicator([(0, 0), (0, 0)], states))
+            states, gojax.action_2d_indices_to_indicator([(0, 0), (0, 0)], states))
         self.assertEqual(
             jnp.sum(
                 jnp.logical_xor(states[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],

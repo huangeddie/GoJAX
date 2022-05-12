@@ -26,7 +26,7 @@ class PieceRemovalTestCase(unittest.TestCase):
                     """
         state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
 
-        next_state = gojax.next_states(state, gojax.action_indices_to_indicator([(0, 1)], state))
+        next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(0, 1)], state))
 
         # Check that the white piece is gone and the black piece is added
         delta_board = jnp.logical_xor(next_state[0, [0, 1]], state[0, [0, 1]])
@@ -47,7 +47,7 @@ class PieceRemovalTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
-        next_state = gojax.next_states(state, gojax.action_indices_to_indicator([(0, 2)], state))
+        next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(0, 2)], state))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.WHITE_CHANNEL_INDEX]))
         self.assertTrue(
             jnp.alltrue(
@@ -66,7 +66,7 @@ class PieceRemovalTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
-        next_state = gojax.next_states(state, gojax.action_indices_to_indicator([(0, 1)], state))
+        next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(0, 1)], state))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.WHITE_CHANNEL_INDEX]))
         self.assertTrue(
             jnp.alltrue(
@@ -84,7 +84,7 @@ class PieceRemovalTestCase(unittest.TestCase):
                     W W W _
                     """
         state = gojax.decode_state(state_str, gojax.WHITES_TURN)
-        next_state = gojax.next_states(state, gojax.action_indices_to_indicator([(1, 1)], state))
+        next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(1, 1)], state))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.BLACK_CHANNEL_INDEX]))
         self.assertTrue(
             jnp.alltrue(

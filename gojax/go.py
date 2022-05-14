@@ -393,7 +393,7 @@ def decode_states(serialized_states: str, turn: bool = constants.BLACKS_TURN, pa
                   komi=None,
                   ended: bool = False):
     """
-    Creates a game boards from the human-readable encoded string.
+    Creates game boards from a human-readable serialzied string.
 
     Each state in the encoding is assumed to be separated by 2 consecutive new lines.
 

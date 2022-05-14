@@ -13,7 +13,7 @@ from jax import lax
 from jax import nn
 
 
-class GeneralTestCase(chex.TestCase):
+class ActionIndicatorsToIndicesTestCase(chex.TestCase):
     @parameterized.named_parameters(
         {'testcase_name': 'pass', 'indicator_actions': [[[False, False],
                                                          [False, False]]], 'expected_indices': 4},
@@ -26,26 +26,27 @@ class GeneralTestCase(chex.TestCase):
                                                                   [False, False]]],
          'expected_indices': (4, 0)},
     )
-    def test_action_indicators_to_indices_(self, indicator_actions, expected_indices):
+    def test_(self, indicator_actions, expected_indices):
         np.testing.assert_array_equal(
             gojax.action_indicators_to_indices(jnp.array(indicator_actions)),
             expected_indices)
 
 
+class NewStatesTestCase(chex.TestCase):
+    @parameterized.named_parameters(
+        {'testcase_name': 'board_size_3_batch_size_1', 'board_size': 3, 'batch_size': 1,
+         'expected_output': jnp.zeros((1, gojax.NUM_CHANNELS, 3, 3), dtype=bool)},
+        {'testcase_name': 'board_size_4_batch_size_1', 'board_size': 4, 'batch_size': 1,
+         'expected_output': jnp.zeros((1, gojax.NUM_CHANNELS, 4, 4), dtype=bool)},
+        {'testcase_name': 'board_size_3_batch_size_2', 'board_size': 3, 'batch_size': 2,
+         'expected_output': jnp.zeros((2, gojax.NUM_CHANNELS, 3, 3), dtype=bool)},
+    )
+    def test_(self, board_size, batch_size, expected_output):
+        np.testing.assert_array_equal(gojax.new_states(board_size, batch_size), expected_output)
+
+
 class LegacyGeneralTestCase(unittest.TestCase):
     """Tests general Go functions."""
-
-    def test_new_state_default_single_batch_size(self):
-        state = gojax.new_states(4)
-        self.assertEqual(state.shape, (1, gojax.NUM_CHANNELS, 4, 4))
-
-    def test_new_state_all_zeros(self):
-        state = gojax.new_states(4)
-        self.assertTrue(jnp.alltrue(state == 0))
-
-    def test_new_state_batch_size_two(self):
-        state = gojax.new_states(4, batch_size=2)
-        self.assertEqual(state.shape, (2, gojax.NUM_CHANNELS, 4, 4))
 
     def test_action_2d_indices_to_indicator_pass(self):
         state = gojax.new_states(2)

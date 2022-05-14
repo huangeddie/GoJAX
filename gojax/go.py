@@ -363,16 +363,41 @@ def swap_perspectives(states):
 
 def _decode_single_state(encode_str, ended, komi, passed, turn):
     lines = encode_str.splitlines()
-    board_size = len(lines)
+    board_size = len(lines[0].split())
     states = new_states(board_size, batch_size=1)
     for i, line in enumerate(lines):
         for j, char in enumerate(line.split()):
             if char == 'B':
-                states = states.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(
-                    True)
+                states = states.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(True)
             elif char == 'W':
-                states = states.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(
-                    True)
+                states = states.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(True)
+        if i == board_size:
+            # Extract metadata
+            for key_value in line.split(';'):
+                key, value = key_value.split('=')
+                value = value.upper()
+                if key == 'TURN':
+                    if value in ['1', 'W', 'WHITE', 'T', 'TRUE']:
+                        turn = True
+                    elif value not in ['0', 'B', 'BLACK', 'F', 'FALSE']:
+                        raise ValueError(f'Invalid TURN value: {value}')
+                elif key == 'PASS':
+                    if value in ['1', 'T', 'TRUE']:
+                        passed = True
+                    elif value not in ['0', 'F', 'FALSE']:
+                        raise ValueError(f'Invalid PASS value: {value}')
+                elif key == 'KOMI':
+                    row, col = value.split(',')
+                    row, col = int(row), int(col)
+                    komi = (row, col)
+                elif key == 'END':
+                    if value in ['1', 'T', 'TRUE']:
+                        ended = True
+                    elif value not in ['0', 'F', 'FALSE']:
+                        raise ValueError(f'Invalid END value: {value}')
+                else:
+                    raise ValueError(f'Unknown macro: {key}')
+
     # Set the turn
     states = states.at[0, constants.TURN_CHANNEL_INDEX].set(turn)
     # Set invalid moves
@@ -397,10 +422,14 @@ def decode_states(serialized_states: str, turn: bool = constants.BLACKS_TURN, pa
 
     Each state in the encoding is assumed to be separated by 2 consecutive new lines.
 
-    Example encoding:
+    Example encodings:
     ```
     B W
     W _
+
+    B W
+    W _
+    TURN=W;PASS=TRUE;KOMI=1,1;END=FALSE
     ```
 
     :param serialized_states: string representations of the Go games.

@@ -361,30 +361,7 @@ def swap_perspectives(states):
     return _change_turns(swapped_pieces)
 
 
-def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bool = False,
-                 komi=None,
-                 ended: bool = False):
-    """
-    Creates a game board from the human-readable encoded string.
-
-    Example encoding:
-    ```
-    B W
-    W _
-    ```
-
-    :param encode_str: string representation of the Go game.
-    :param turn: boolean turn indicator.
-    :param passed: boolean indicator if the previous move was passed.
-    :param komi: 2d action (tuple of 2 integers) or None.
-    :param ended: whether the game ended.
-    :return: a 1 x C x B X B boolean array.
-    """
-    encode_str = textwrap.dedent(encode_str)
-    if encode_str[0] == '\n':
-        encode_str = encode_str[1:]
-    if encode_str[-1] == '\n':
-        encode_str = encode_str[:-1]
+def _decode_single_state(encode_str, ended, komi, passed, turn):
     lines = encode_str.splitlines()
     board_size = len(lines)
     states = new_states(board_size, batch_size=1)
@@ -396,24 +373,53 @@ def decode_state(encode_str: str, turn: bool = constants.BLACKS_TURN, passed: bo
             elif char == 'W':
                 states = states.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(
                     True)
-
     # Set the turn
     states = states.at[0, constants.TURN_CHANNEL_INDEX].set(turn)
-
     # Set invalid moves
     states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
         compute_invalid_actions(states, jnp.zeros_like(states[:, 0])))
     if komi:
         states = states.at[0, constants.INVALID_CHANNEL_INDEX,
                            komi[0], komi[1]].set(True)
-
     # Set passed
     states = states.at[0, constants.PASS_CHANNEL_INDEX].set(passed)
-
     # Set ended
     states = states.at[0, constants.END_CHANNEL_INDEX].set(ended)
 
     return states
+
+
+def decode_states(serialized_states: str, turn: bool = constants.BLACKS_TURN, passed: bool = False,
+                  komi=None,
+                  ended: bool = False):
+    """
+    Creates a game boards from the human-readable encoded string.
+
+    Each state in the encoding is assumed to be separated by 2 consecutive new lines.
+
+    Example encoding:
+    ```
+    B W
+    W _
+    ```
+
+    :param serialized_states: string representations of the Go games.
+    :param turn: boolean turn indicator.
+    :param passed: boolean indicator if the previous move was passed.
+    :param komi: 2d action (tuple of 2 integers) or None.
+    :param ended: whether the game ended.
+    :return: a N x C x B X B boolean array.
+    """
+    if serialized_states[0] == '\n':
+        serialized_states = serialized_states[1:]
+    if serialized_states[-1] == '\n':
+        serialized_states = serialized_states[:-1]
+    serialized_states = textwrap.dedent(serialized_states)
+    states = []
+    for serialized_state in serialized_states.split('\n\n'):
+        states.append(_decode_single_state(serialized_state, ended, komi, passed, turn))
+
+    return jnp.concatenate(states)
 
 
 def _get_second_character_go_pretty_string(i, j, size):

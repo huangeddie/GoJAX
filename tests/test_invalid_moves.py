@@ -49,7 +49,7 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = gojax.decode_state(state_str, gojax.WHITES_TURN)
+        state = gojax.decode_states(state_str, gojax.WHITES_TURN)
         self.assertTrue(state[:, gojax.INVALID_CHANNEL_INDEX, 0, 0])
 
     def test_no_liberties_connect_to_group(self):
@@ -59,7 +59,7 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
+        state = gojax.decode_states(state_str, gojax.BLACKS_TURN)
         self.assertTrue(state[0, gojax.INVALID_CHANNEL_INDEX, 0, 1])
 
     def test_get_action_is_invalid_false(self):
@@ -69,7 +69,7 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
+        state = gojax.decode_states(state_str, gojax.BLACKS_TURN)
         action1d = 0
         my_killed_pieces = jnp.zeros((1, 4, 4), dtype=bool)
         self.assertFalse(gojax.compute_actions_are_invalid(
@@ -82,7 +82,7 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ B W _
                     _ _ _ _
                     """
-        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
+        state = gojax.decode_states(state_str, gojax.BLACKS_TURN)
         action1d = 6
         my_killed_pieces = jnp.array([[[False, False, False, False],
                                        [False, False, True, False],
@@ -98,18 +98,18 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ B W _
                     _ _ _ _
                     """
-        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
+        state = gojax.decode_states(state_str, gojax.BLACKS_TURN)
         next_state = gojax.next_states(
             state, gojax.action_2d_indices_to_indicator([(1, 2)], state))
         self.assertTrue(next_state[:, gojax.INVALID_CHANNEL_INDEX, 1, 1])
 
     def test_invalid_move_no_op_pieces(self):
-        state = gojax.decode_state("""
+        state = gojax.decode_states("""
                                 _ _ _
                                 _ W _
                                 _ _ _
                                 """,
-                                   gojax.BLACKS_TURN)
+                                    gojax.BLACKS_TURN)
         next_state = gojax.next_states(
             state, gojax.action_2d_indices_to_indicator([(1, 1)], state))
         np.testing.assert_array_equal(
@@ -121,18 +121,18 @@ class InvalidMovesTestCase(unittest.TestCase):
             next_state), [gojax.WHITES_TURN])
 
     def test_compute_invalid_actions_for_two_states(self):
-        states = jnp.concatenate((gojax.decode_state("""
+        states = jnp.concatenate((gojax.decode_states("""
                                                           B _ _
                                                           _ _ _
                                                           _ _ _
                                                           """,
-                                                     turn=gojax.WHITES_TURN),
-                                  gojax.decode_state("""
+                                                      turn=gojax.WHITES_TURN),
+                                  gojax.decode_states("""
                                                           _ B _
                                                           _ _ _
                                                           _ _ _
                                                           """,
-                                                     turn=gojax.WHITES_TURN)
+                                                      turn=gojax.WHITES_TURN)
                                   ), axis=0)
         np.testing.assert_array_equal(
             gojax.compute_invalid_actions(states, my_killed_pieces=jnp.zeros_like(states[:, 0])),

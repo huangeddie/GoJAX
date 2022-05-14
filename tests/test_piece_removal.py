@@ -24,7 +24,7 @@ class PieceRemovalTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
+        state = gojax.decode_states(state_str, gojax.BLACKS_TURN)
 
         next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(0, 1)], state))
 
@@ -46,7 +46,7 @@ class PieceRemovalTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
+        state = gojax.decode_states(state_str, gojax.BLACKS_TURN)
         next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(0, 2)], state))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.WHITE_CHANNEL_INDEX]))
         self.assertTrue(
@@ -65,7 +65,7 @@ class PieceRemovalTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = gojax.decode_state(state_str, gojax.BLACKS_TURN)
+        state = gojax.decode_states(state_str, gojax.BLACKS_TURN)
         next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(0, 1)], state))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.WHITE_CHANNEL_INDEX]))
         self.assertTrue(
@@ -83,7 +83,7 @@ class PieceRemovalTestCase(unittest.TestCase):
                     B B B W
                     W W W _
                     """
-        state = gojax.decode_state(state_str, gojax.WHITES_TURN)
+        state = gojax.decode_states(state_str, gojax.WHITES_TURN)
         next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(1, 1)], state))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.BLACK_CHANNEL_INDEX]))
         self.assertTrue(

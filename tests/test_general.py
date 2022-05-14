@@ -13,23 +13,26 @@ from jax import lax
 from jax import nn
 
 
-class ActionIndicatorsToIndicesTestCase(chex.TestCase):
+class GeneralTestCase(chex.TestCase):
     @parameterized.named_parameters(
-        ('pass', jnp.array([[[False, False],
-                             [False, False]]]), 4),
-        ('first_index', jnp.array([[[True, False],
-                                    [False, False]]]), 0),
-        ('pass_and_move', jnp.array([[[False, False],
-                                      [False, False]],
-                                     [[True, False],
-                                      [False, False]]]), (4, 0)),
+        {'testcase_name': 'pass', 'indicator_actions': [[[False, False],
+                                                         [False, False]]], 'expected_indices': 4},
+        {'testcase_name': 'first_index', 'indicator_actions': [[[True, False],
+                                                                [False, False]]],
+         'expected_indices': 0},
+        {'testcase_name': 'pass_and_move', 'indicator_actions': [[[False, False],
+                                                                  [False, False]],
+                                                                 [[True, False],
+                                                                  [False, False]]],
+         'expected_indices': (4, 0)},
     )
-    def test(self, indicator_actions, expected_indices):
-        np.testing.assert_array_equal(gojax.action_indicators_to_indices(indicator_actions),
-                                      expected_indices)
+    def test_action_indicators_to_indices_(self, indicator_actions, expected_indices):
+        np.testing.assert_array_equal(
+            gojax.action_indicators_to_indices(jnp.array(indicator_actions)),
+            expected_indices)
 
 
-class GeneralTestCase(unittest.TestCase):
+class LegacyGeneralTestCase(unittest.TestCase):
     """Tests general Go functions."""
 
     def test_new_state_default_single_batch_size(self):

@@ -97,15 +97,13 @@ def _paint_fill(seeds, areas):
     Note that the seeds must intersect a location of an area in order to fill it. It cannot be
     adjacent to an area.
 
-    :param seeds: an N x B x B boolean array where the True entries are the seeds.
-    :param areas: an N x B x B boolean array where the True entries are areas.
-    :return: an N x B x B boolean array.
+    :param seeds: an N x 1 x B x B boolean array where the True entries are the seeds.
+    :param areas: an N x 1 x B x B boolean array where the True entries are areas.
+    :return: an N x 1 x B x B boolean array.
     """
     kernel = _get_cardinally_connected_kernel()
     second_expansion = jnp.logical_and(
-        jnp.squeeze(
-            lax.conv(jnp.expand_dims(seeds, 1), kernel, window_strides=(1, 1), padding='same'), 1),
-        areas)
+        lax.conv(seeds, kernel, window_strides=(1, 1), padding='same'), areas)
     last_two_expansions = jnp.stack([seeds, second_expansion], axis=0)
 
     def _last_expansion_no_change(last_two_expansions_):
@@ -114,11 +112,9 @@ def _paint_fill(seeds, areas):
     def _expand(last_two_expansions_):
         last_two_expansions_ = last_two_expansions_.at[0].set(
             last_two_expansions_[1])  # Copy the second state to the first state
-        return last_two_expansions_.at[1].set(
-            jnp.logical_and(
-                jnp.squeeze(lax.conv(jnp.expand_dims(last_two_expansions_[1], 1), kernel,
-                                     window_strides=(1, 1), padding='same'), 1),
-                areas))
+        return last_two_expansions_.at[1].set(jnp.logical_and(
+            lax.conv(last_two_expansions_[1], kernel, window_strides=(1, 1), padding='same'),
+            areas))
 
     return lax.while_loop(_last_expansion_no_change, _expand, last_two_expansions)[1]
 
@@ -145,13 +141,13 @@ def compute_free_groups(states, turns):
     :param turns: a boolean array of length N.
     :return: an N x B x B boolean array.
     """
-    pieces = state_info.get_pieces_per_turn(states, turns)
+    pieces = jnp.expand_dims(state_info.get_pieces_per_turn(states, turns), 1)
     empty_spaces = state_info.get_empty_spaces(states, keepdims=True)  # N x 1 x B x B array.
     kernel = _get_cardinally_connected_kernel()
-    immediate_free_pieces = jnp.logical_and(
-        jnp.squeeze(lax.conv(empty_spaces, kernel, (1, 1), padding='same'), 1), pieces)
+    immediate_free_pieces = jnp.logical_and(lax.conv(empty_spaces, kernel, (1, 1), padding='same'),
+                                            pieces)
 
-    return _paint_fill(immediate_free_pieces, pieces)
+    return jnp.squeeze(_paint_fill(immediate_free_pieces, pieces), 1)
 
 
 def compute_areas(states):
@@ -177,12 +173,8 @@ def compute_areas(states):
         lax.conv(jnp.expand_dims(black_pieces, 1), kernel, (1, 1), padding="same"), empty_spaces)
     immediately_connected_to_white_pieces = jnp.logical_and(
         lax.conv(jnp.expand_dims(white_pieces, 1), kernel, (1, 1), padding="same"), empty_spaces)
-    connected_to_black_pieces = jnp.expand_dims(
-        _paint_fill(jnp.squeeze(immediately_connected_to_black_pieces, 1),
-                    jnp.squeeze(empty_spaces, 1)), 1)
-    connected_to_white_pieces = jnp.expand_dims(
-        _paint_fill(jnp.squeeze(immediately_connected_to_white_pieces, 1),
-                    jnp.squeeze(empty_spaces, 1)), 1)
+    connected_to_black_pieces = _paint_fill(immediately_connected_to_black_pieces, empty_spaces)
+    connected_to_white_pieces = _paint_fill(immediately_connected_to_white_pieces, empty_spaces)
 
     connected_to_pieces = jnp.concatenate((connected_to_black_pieces, connected_to_white_pieces), 1)
     pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]

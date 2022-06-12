@@ -28,7 +28,7 @@ def get_pieces_per_turn(states, turns):
     :param turns: a boolean array of length N indicating which pieces to reference per state.
     :return: an array of shape N x B x B.
     """
-    return states[jnp.arange(states.shape[0]), jnp.array(turns, dtype=int)]
+    return states[jnp.arange(states.shape[0]), jnp.array(turns, dtype='uint8')]
 
 
 def get_turns(states):

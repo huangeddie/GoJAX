@@ -103,7 +103,7 @@ def _paint_fill(seeds, areas):
     """
     kernel = _get_cardinally_connected_kernel()
     second_expansion = jnp.logical_and(
-        lax.conv(seeds.astype(float), kernel, window_strides=(1, 1),
+        lax.conv(seeds.astype('bfloat16'), kernel, window_strides=(1, 1),
                  padding='same').astype(bool),
         areas)
     last_two_expansions = jnp.stack([seeds, second_expansion], axis=0)
@@ -115,7 +115,7 @@ def _paint_fill(seeds, areas):
         last_two_expansions_ = last_two_expansions_.at[0].set(
             last_two_expansions_[1])  # Copy the second state to the first state
         return last_two_expansions_.at[1].set(jnp.logical_and(
-            lax.conv(last_two_expansions_[1].astype(float), kernel, window_strides=(1, 1),
+            lax.conv(last_two_expansions_[1].astype('bfloat16'), kernel, window_strides=(1, 1),
                      padding='same').astype(bool),
             areas))
 
@@ -134,7 +134,7 @@ def _get_cardinally_connected_kernel():
     """
     return jnp.array([[[[0., 1., 0.],
                         [1., 1., 1.],
-                        [0., 1., 0.]]]])
+                        [0., 1., 0.]]]], dtype='bfloat16')
 
 
 def compute_free_groups(states, turns):
@@ -150,7 +150,7 @@ def compute_free_groups(states, turns):
     pieces = jnp.expand_dims(state_info.get_pieces_per_turn(states, turns), 1)
     empty_spaces = state_info.get_empty_spaces(states, keepdims=True)  # N x 1 x B x B array.
     immediate_free_pieces = jnp.logical_and(
-        lax.conv(empty_spaces.astype(float), _get_cardinally_connected_kernel(), (1, 1),
+        lax.conv(empty_spaces.astype('bfloat16'), _get_cardinally_connected_kernel(), (1, 1),
                  padding='same'),
         pieces)
 
@@ -177,10 +177,12 @@ def compute_areas(states):
     empty_spaces = state_info.get_empty_spaces(states, keepdims=True)
 
     immediately_connected_to_black_pieces = jnp.logical_and(
-        lax.conv(jnp.expand_dims(black_pieces, 1).astype(float), kernel, (1, 1), padding="same"),
+        lax.conv(jnp.expand_dims(black_pieces, 1).astype('bfloat16'), kernel, (1, 1),
+                 padding="same"),
         empty_spaces)
     immediately_connected_to_white_pieces = jnp.logical_and(
-        lax.conv(jnp.expand_dims(white_pieces, 1).astype(float), kernel, (1, 1), padding="same"),
+        lax.conv(jnp.expand_dims(white_pieces, 1).astype('bfloat16'), kernel, (1, 1),
+                 padding="same"),
         empty_spaces)
     connected_to_black_pieces = _paint_fill(immediately_connected_to_black_pieces, empty_spaces)
     connected_to_white_pieces = _paint_fill(immediately_connected_to_white_pieces, empty_spaces)

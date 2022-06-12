@@ -5,15 +5,16 @@
 import unittest
 
 import chex
-import gojax
 import jax.numpy as jnp
 import numpy as np
 from absl.testing import parameterized
 from jax import lax
 from jax import nn
 
+import gojax
 
-class ActionIndicatorsToIndicesTestCase(chex.TestCase):
+
+class ActionsTestCase(chex.TestCase):
     @parameterized.named_parameters(
         {'testcase_name': 'pass', 'indicator_actions': [[[False, False],
                                                          [False, False]]], 'expected_indices': 4},
@@ -26,10 +27,20 @@ class ActionIndicatorsToIndicesTestCase(chex.TestCase):
                                                                   [False, False]]],
          'expected_indices': (4, 0)},
     )
-    def test_(self, indicator_actions, expected_indices):
+    def test_action_indicators_to_indices_(self, indicator_actions, expected_indices):
         np.testing.assert_array_equal(
             gojax.action_indicators_to_indices(jnp.array(indicator_actions)),
             expected_indices)
+
+    @parameterized.named_parameters(
+        {'testcase_name': 'small', 'board_size': 3, 'batch_size': 1, 'expected_action_size': 10},
+        {'testcase_name': 'intermediate', 'board_size': 7, 'batch_size': 4,
+         'expected_action_size': 50},
+        {'testcase_name': 'big', 'board_size': 19, 'batch_size': 8, 'expected_action_size': 362},
+    )
+    def test_get_action_size_(self, board_size, batch_size, expected_action_size):
+        states = gojax.new_states(board_size, batch_size)
+        self.assertEqual(gojax.get_action_size(states), expected_action_size)
 
 
 class NewStatesTestCase(chex.TestCase):
@@ -41,7 +52,7 @@ class NewStatesTestCase(chex.TestCase):
         {'testcase_name': 'board_size_3_batch_size_2', 'board_size': 3, 'batch_size': 2,
          'expected_output': jnp.zeros((2, gojax.NUM_CHANNELS, 3, 3), dtype=bool)},
     )
-    def test_(self, board_size, batch_size, expected_output):
+    def test_new_states_(self, board_size, batch_size, expected_output):
         new_states = gojax.new_states(board_size, batch_size)
         np.testing.assert_array_equal(new_states, expected_output)
         chex.assert_type(new_states, bool)

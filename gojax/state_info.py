@@ -5,6 +5,19 @@ from jax import numpy as jnp
 from gojax import constants
 
 
+def get_action_size(states):
+    """
+    The number of different actions to take.
+
+    If states is N x B1 x B2, then the action size is B1 x B2 + 1.
+
+    :param states: an array of N Go games.
+    :return: a scalar integer.
+    """
+    b1, b2 = states.shape[-2:]
+    return b1 * b2 + 1
+
+
 def get_pieces_per_turn(states, turns):
     """
     Slices the black/white pieces of the states.

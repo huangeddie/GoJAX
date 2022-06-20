@@ -9,162 +9,162 @@ import gojax
 
 
 def _decode_single_state(encode_str, ended, komi, passed, turn):
-  lines = encode_str.splitlines()
-  board_size = len(lines[0].split())
-  states = gojax.new_states(board_size, batch_size=1)
-  for i, line in enumerate(lines):
-    for j, char in enumerate(line.split()):
-      if char == 'B':
-        states = states.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(True)
-      elif char == 'W':
-        states = states.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(True)
-    if i == board_size:
-      # Extract metadata.
-      for key_value in line.split(';'):
-        key, value = key_value.split('=')
-        value = value.upper()
-        if key == 'TURN':
-          if value in ['1', 'W', 'WHITE', 'T', 'TRUE']:
-            turn = True
-          elif value not in ['0', 'B', 'BLACK', 'F', 'FALSE']:
-            raise ValueError(f'Invalid TURN value: {value}')
-        elif key == 'PASS':
-          if value in ['1', 'T', 'TRUE']:
-            passed = True
-          elif value not in ['0', 'F', 'FALSE']:
-            raise ValueError(f'Invalid PASS value: {value}')
-        elif key == 'KOMI':
-          row, col = value.split(',')
-          row, col = int(row), int(col)
-          komi = (row, col)
-        elif key == 'END':
-          if value in ['1', 'T', 'TRUE']:
-            ended = True
-          elif value not in ['0', 'F', 'FALSE']:
-            raise ValueError(f'Invalid END value: {value}')
-        else:
-          raise ValueError(f'Unknown macro: {key}')
+    lines = encode_str.splitlines()
+    board_size = len(lines[0].split())
+    states = gojax.new_states(board_size, batch_size=1)
+    for i, line in enumerate(lines):
+        for j, char in enumerate(line.split()):
+            if char == 'B':
+                states = states.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(True)
+            elif char == 'W':
+                states = states.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(True)
+        if i == board_size:
+            # Extract metadata.
+            for key_value in line.split(';'):
+                key, value = key_value.split('=')
+                value = value.upper()
+                if key == 'TURN':
+                    if value in ['1', 'W', 'WHITE', 'T', 'TRUE']:
+                        turn = True
+                    elif value not in ['0', 'B', 'BLACK', 'F', 'FALSE']:
+                        raise ValueError(f'Invalid TURN value: {value}')
+                elif key == 'PASS':
+                    if value in ['1', 'T', 'TRUE']:
+                        passed = True
+                    elif value not in ['0', 'F', 'FALSE']:
+                        raise ValueError(f'Invalid PASS value: {value}')
+                elif key == 'KOMI':
+                    row, col = value.split(',')
+                    row, col = int(row), int(col)
+                    komi = (row, col)
+                elif key == 'END':
+                    if value in ['1', 'T', 'TRUE']:
+                        ended = True
+                    elif value not in ['0', 'F', 'FALSE']:
+                        raise ValueError(f'Invalid END value: {value}')
+                else:
+                    raise ValueError(f'Unknown macro: {key}')
 
-  # Set the turn.
-  states = states.at[0, constants.TURN_CHANNEL_INDEX].set(turn)
-  # Set invalid moves.
-  states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
-    gojax.compute_invalid_actions(states, jnp.zeros_like(states[:, 0])))
-  if komi:
-    states = states.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
-  # Set passed.
-  states = states.at[0, constants.PASS_CHANNEL_INDEX].set(passed)
-  # Set ended.
-  states = states.at[0, constants.END_CHANNEL_INDEX].set(ended)
+    # Set the turn.
+    states = states.at[0, constants.TURN_CHANNEL_INDEX].set(turn)
+    # Set invalid moves.
+    states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
+        gojax.compute_invalid_actions(states, jnp.zeros_like(states[:, 0])))
+    if komi:
+        states = states.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
+    # Set passed.
+    states = states.at[0, constants.PASS_CHANNEL_INDEX].set(passed)
+    # Set ended.
+    states = states.at[0, constants.END_CHANNEL_INDEX].set(ended)
 
-  return states
+    return states
 
 
 def decode_states(serialized_states: str, turn: bool = constants.BLACKS_TURN, passed: bool = False,
                   komi=None, ended: bool = False):
-  """
-  Creates game boards from a human-readable serialzied string.
+    """
+    Creates game boards from a human-readable serialzied string.
 
-  Each state in the encoding is assumed to be separated by 2 consecutive new lines.
+    Each state in the encoding is assumed to be separated by 2 consecutive new lines.
 
-  Example encodings:
-  ```
-  B W
-  W _
+    Example encodings:
+    ```
+    B W
+    W _
 
-  B W
-  W _
-  TURN=W;PASS=TRUE;KOMI=1,1;END=FALSE
-  ```
+    B W
+    W _
+    TURN=W;PASS=TRUE;KOMI=1,1;END=FALSE
+    ```
 
-  :param serialized_states: string representations of the Go games.
-  :param turn: boolean turn indicator.
-  :param passed: boolean indicator if the previous move was passed.
-  :param komi: 2d action (tuple of 2 integers) or None.
-  :param ended: whether the game ended.
-  :return: a N x C x B X B boolean array.
-  """
-  if serialized_states[0] == '\n':
-    serialized_states = serialized_states[1:]
-  if serialized_states[-1] == '\n':
-    serialized_states = serialized_states[:-1]
-  serialized_states = textwrap.dedent(serialized_states)
-  states = []
-  for serialized_state in serialized_states.split('\n\n'):
-    states.append(_decode_single_state(serialized_state, ended, komi, passed, turn))
+    :param serialized_states: string representations of the Go games.
+    :param turn: boolean turn indicator.
+    :param passed: boolean indicator if the previous move was passed.
+    :param komi: 2d action (tuple of 2 integers) or None.
+    :param ended: whether the game ended.
+    :return: a N x C x B X B boolean array.
+    """
+    if serialized_states[0] == '\n':
+        serialized_states = serialized_states[1:]
+    if serialized_states[-1] == '\n':
+        serialized_states = serialized_states[:-1]
+    serialized_states = textwrap.dedent(serialized_states)
+    states = []
+    for serialized_state in serialized_states.split('\n\n'):
+        states.append(_decode_single_state(serialized_state, ended, komi, passed, turn))
 
-  return jnp.concatenate(states)
+    return jnp.concatenate(states)
 
 
 def _get_second_character_go_pretty_string(i, j, size):
-  """Returns the corresponding second character for the given position on the Go board."""
-  if i == 0:
-    if j == 0:
-      character = '╔'
-    elif j == size - 1:
-      character = '╗'
+    """Returns the corresponding second character for the given position on the Go board."""
+    if i == 0:
+        if j == 0:
+            character = '╔'
+        elif j == size - 1:
+            character = '╗'
+        else:
+            character = '╤'
+    elif i == size - 1:
+        if j == 0:
+            character = '╚'
+        elif j == size - 1:
+            character = '╝'
+        else:
+            character = '╧'
     else:
-      character = '╤'
-  elif i == size - 1:
-    if j == 0:
-      character = '╚'
-    elif j == size - 1:
-      character = '╝'
-    else:
-      character = '╧'
-  else:
-    if j == 0:
-      character = '╟'
-    elif j == size - 1:
-      character = '╢'
-    else:
-      character = '┼'
-  return character
+        if j == 0:
+            character = '╟'
+        elif j == size - 1:
+            character = '╢'
+        else:
+            character = '┼'
+    return character
 
 
 def get_pretty_string(state):
-  """
-  Creates a human-friendly string of the given state.
+    """
+    Creates a human-friendly string of the given state.
 
-  :param state: C x B x B boolean array .
-  :return: string representing the state.
-  """
-  board_str = ''
+    :param state: C x B x B boolean array .
+    :return: string representing the state.
+    """
+    board_str = ''
 
-  size = state.shape[1]
-  board_str += '\t'
-  for i in range(size):
-    board_str += f'{i}'.ljust(2, ' ')
-  board_str += '\n'
-  for i in range(size):
-    board_str += f'{i}\t'
-    for j in range(size):
-      # First character
-      if state[constants.BLACK_CHANNEL_INDEX, i, j]:
-        board_str += '○'
-      elif state[constants.WHITE_CHANNEL_INDEX, i, j]:
-        board_str += '●'
-      else:
-        board_str += _get_second_character_go_pretty_string(i, j, size)
-
-      # Second character
-      if j != size - 1:
-        if i in (0, size - 1):
-          board_str += '═'
-        else:
-          board_str += '─'
+    size = state.shape[1]
+    board_str += '\t'
+    for i in range(size):
+        board_str += f'{i}'.ljust(2, ' ')
     board_str += '\n'
+    for i in range(size):
+        board_str += f'{i}\t'
+        for j in range(size):
+            # First character
+            if state[constants.BLACK_CHANNEL_INDEX, i, j]:
+                board_str += '○'
+            elif state[constants.WHITE_CHANNEL_INDEX, i, j]:
+                board_str += '●'
+            else:
+                board_str += _get_second_character_go_pretty_string(i, j, size)
 
-  areas = gojax.compute_area_sizes(jnp.expand_dims(state, 0))
-  done = jnp.alltrue(state[constants.END_CHANNEL_INDEX])
-  previous_player_passed = jnp.alltrue(state[constants.PASS_CHANNEL_INDEX])
-  turn = jnp.alltrue(state[constants.TURN_CHANNEL_INDEX])
-  if done:
-    game_state = 'END'
-  elif previous_player_passed:
-    game_state = 'PASSED'
-  else:
-    game_state = 'ONGOING'
-  board_str += f"\tTurn: {'BLACK' if turn == 0 else 'WHITE'}, Game State: {game_state}\n"
-  board_str += f'\tBlack Area: {areas[0, 0]}, White Area: {areas[0, 1]}\n'
-  return board_str
+            # Second character
+            if j != size - 1:
+                if i in (0, size - 1):
+                    board_str += '═'
+                else:
+                    board_str += '─'
+        board_str += '\n'
+
+    areas = gojax.compute_area_sizes(jnp.expand_dims(state, 0))
+    done = jnp.alltrue(state[constants.END_CHANNEL_INDEX])
+    previous_player_passed = jnp.alltrue(state[constants.PASS_CHANNEL_INDEX])
+    turn = jnp.alltrue(state[constants.TURN_CHANNEL_INDEX])
+    if done:
+        game_state = 'END'
+    elif previous_player_passed:
+        game_state = 'PASSED'
+    else:
+        game_state = 'ONGOING'
+    board_str += f"\tTurn: {'BLACK' if turn == 0 else 'WHITE'}, Game State: {game_state}\n"
+    board_str += f'\tBlack Area: {areas[0, 0]}, White Area: {areas[0, 1]}\n'
+    return board_str

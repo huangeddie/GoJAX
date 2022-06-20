@@ -13,6 +13,7 @@ from jax import lax
 from jax import nn
 
 import gojax
+import rng
 
 
 class ActionsTestCase(chex.TestCase):
@@ -44,7 +45,7 @@ class ActionsTestCase(chex.TestCase):
     self.assertEqual(gojax.get_action_size(states), expected_action_size)
 
   def test_sample_actions_from_logits(self):
-    sampled_actions = gojax.sample_actions_from_logits(
+    sampled_actions = rng.sample_actions_from_logits(
       gojax.new_states(board_size=3, batch_size=2),
       logits=jnp.array([[10, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 10, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=float),
@@ -65,9 +66,9 @@ class ActionsTestCase(chex.TestCase):
                                     B B _
                                     TURN=W
                                     """)
-    sampled_actions = gojax.sample_actions_from_logits(states,
-                                                       logits=jnp.zeros((1, 10), dtype=float),
-                                                       rng_key=jax.random.PRNGKey(10))
+    sampled_actions = rng.sample_actions_from_logits(states,
+                                                     logits=jnp.zeros((1, 10), dtype=float),
+                                                     rng_key=jax.random.PRNGKey(10))
     np.testing.assert_array_equal(sampled_actions, [[[0, 0, 0],
                                                      [0, 0, 0],
                                                      [0, 0, 1]]])
@@ -79,9 +80,9 @@ class ActionsTestCase(chex.TestCase):
                                     B B _
                                     TURN=W
                                     """)
-    sampled_actions = gojax.sample_actions_from_logits(states,
-                                                       logits=jnp.zeros((1, 10), dtype=float),
-                                                       rng_key=jax.random.PRNGKey(42))
+    sampled_actions = rng.sample_actions_from_logits(states,
+                                                     logits=jnp.zeros((1, 10), dtype=float),
+                                                     rng_key=jax.random.PRNGKey(42))
     np.testing.assert_array_equal(sampled_actions, [[[0, 0, 0],
                                                      [0, 0, 0],
                                                      [0, 0, 0]]])
@@ -92,14 +93,14 @@ class ActionsTestCase(chex.TestCase):
                                     W W _
                                     W W _
                                     """)
-    sampled_actions = gojax.sample_actions_uniformly(states, jax.random.PRNGKey(10))
+    sampled_actions = rng.sample_actions_uniformly(states, jax.random.PRNGKey(10))
     np.testing.assert_array_equal(sampled_actions, [[[0, 0, 0],
                                                      [0, 0, 0],
                                                      [0, 0, 1]]])
 
   def test_sample_random_state_uniformly(self):
-    state = gojax.sample_random_state_uniformly(board_size=3, batch_size=1, num_steps=4,
-                                                rng_key=jax.random.PRNGKey(42))
+    state = rng.sample_random_state_uniformly(board_size=3, batch_size=1, num_steps=4,
+                                              rng_key=jax.random.PRNGKey(42))
     np.testing.assert_array_equal(state, gojax.decode_states("""
                                                                 W B _
                                                                 _ _ _

@@ -51,8 +51,7 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
   states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
     gojax.compute_invalid_actions(states, jnp.zeros_like(states[:, 0])))
   if komi:
-    states = states.at[0, constants.INVALID_CHANNEL_INDEX,
-                       komi[0], komi[1]].set(True)
+    states = states.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
   # Set passed.
   states = states.at[0, constants.PASS_CHANNEL_INDEX].set(passed)
   # Set ended.
@@ -62,8 +61,7 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
 
 
 def decode_states(serialized_states: str, turn: bool = constants.BLACKS_TURN, passed: bool = False,
-                  komi=None,
-                  ended: bool = False):
+                  komi=None, ended: bool = False):
   """
   Creates game boards from a human-readable serialzied string.
 

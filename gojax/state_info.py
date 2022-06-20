@@ -82,9 +82,8 @@ def get_empty_spaces(states, keepdims=False):
   :param keepdims: Whether to keep the Go state channel dimension.
   :return: an N x B x B boolean array or N x 1 x B x B boolean array.
   """
-  return ~jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
-                  axis=1, dtype=bool,
-                  keepdims=keepdims)
+  return ~jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]], axis=1,
+                  dtype=bool, keepdims=keepdims)
 
 
 def get_occupied_spaces(states):
@@ -94,5 +93,5 @@ def get_occupied_spaces(states):
   :param states: a batch array of N Go games.
   :return: an N x B x B boolean array.
   """
-  return jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
-                 axis=1, dtype=bool)
+  return jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]], axis=1,
+                 dtype=bool)

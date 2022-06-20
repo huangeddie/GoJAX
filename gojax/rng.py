@@ -22,8 +22,7 @@ def sample_actions_from_logits(states, logits, rng_key):
     jnp.full_like(logits, float('-inf')), logits)
   action_1d = jax.random.categorical(rng_key, action_logits)
   one_hot_action_1d = jax.nn.one_hot(action_1d, action_logits.shape[1], dtype=bool)
-  actions = jnp.reshape(one_hot_action_1d[:, :-1],
-                        (-1, states.shape[2], states.shape[3]))
+  actions = jnp.reshape(one_hot_action_1d[:, :-1], (-1, states.shape[2], states.shape[3]))
   return actions
 
 
@@ -45,9 +44,7 @@ def sample_next_states_uniformly(step, states, rng_key):
   :return: a batch array of N Go games.
   """
   return gojax.next_states(states,
-                           sample_actions_uniformly(states,
-                                                    jax.random.fold_in(rng_key,
-                                                                       step)))
+                           sample_actions_uniformly(states, jax.random.fold_in(rng_key, step)))
 
 
 def sample_random_state_uniformly(board_size, batch_size, num_steps, rng_key):
@@ -61,6 +58,5 @@ def sample_random_state_uniformly(board_size, batch_size, num_steps, rng_key):
   :return: the final state of the game (trajectory).
   """
   return lax.fori_loop(0, num_steps,
-                       jax.tree_util.Partial(sample_next_states_uniformly,
-                                             rng_key=rng_key),
+                       jax.tree_util.Partial(sample_next_states_uniformly, rng_key=rng_key),
                        gojax.new_states(board_size, batch_size))

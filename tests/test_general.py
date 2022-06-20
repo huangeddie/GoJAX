@@ -14,6 +14,7 @@ from jax import nn
 
 import gojax
 import rng
+import serialize
 
 
 class ActionsTestCase(chex.TestCase):
@@ -60,7 +61,7 @@ class ActionsTestCase(chex.TestCase):
     chex.assert_type(sampled_actions, bool)
 
   def test_only_piece_action_from_logits(self):
-    states = gojax.decode_states("""
+    states = serialize.decode_states("""
                                     B B B
                                     B B B
                                     B B _
@@ -74,7 +75,7 @@ class ActionsTestCase(chex.TestCase):
                                                      [0, 0, 1]]])
 
   def test_pass_from_state_with_one_piece_action(self):
-    states = gojax.decode_states("""
+    states = serialize.decode_states("""
                                     B B B
                                     B B B
                                     B B _
@@ -88,7 +89,7 @@ class ActionsTestCase(chex.TestCase):
                                                      [0, 0, 0]]])
 
   def test_sample_actions_uniformly(self):
-    states = gojax.decode_states("""
+    states = serialize.decode_states("""
                                     W W W
                                     W W _
                                     W W _
@@ -101,7 +102,7 @@ class ActionsTestCase(chex.TestCase):
   def test_sample_random_state_uniformly(self):
     state = rng.sample_random_state_uniformly(board_size=3, batch_size=1, num_steps=4,
                                               rng_key=jax.random.PRNGKey(42))
-    np.testing.assert_array_equal(state, gojax.decode_states("""
+    np.testing.assert_array_equal(state, serialize.decode_states("""
                                                                 W B _
                                                                 _ _ _
                                                                 _ W B
@@ -241,12 +242,12 @@ class LegacyGeneralTestCase(unittest.TestCase):
                                          state[0, gojax.END_CHANNEL_INDEX]))))
 
   def test_game_end_no_op_pieces(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         _ _ _
                         _ _ _
                         _ _ _
                         """,
-                                ended=True)
+                                    ended=True)
     next_state = gojax.next_states(
       state, gojax.action_2d_indices_to_indicator([(1, 1)], state))
     np.testing.assert_array_equal(
@@ -258,17 +259,17 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.get_ended(next_state), [True])
 
   def test_no_op_second_state(self):
-    first_state = gojax.decode_states("""
+    first_state = serialize.decode_states("""
                               _ _ _
                               _ _ _
                               _ _ _
                               """)
-    second_state = gojax.decode_states("""
+    second_state = serialize.decode_states("""
                                _ _ _
                                _ _ _
                                _ _ _
                                """,
-                                       ended=True)
+                                           ended=True)
     states = jnp.concatenate((first_state, second_state), axis=0)
     next_states = gojax.next_states(
       states, gojax.action_2d_indices_to_indicator([(0, 0), (0, 0)], states))
@@ -295,7 +296,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ B _ _
             _ _ W _
             """
-    state = gojax.decode_states(state_str, komi=(0, 0))
+    state = serialize.decode_states(state_str, komi=(0, 0))
     occupied_spaces = gojax.get_occupied_spaces(state)
     np.testing.assert_array_equal(occupied_spaces, [[[False, True, False, False],
                                                      [True, False, True, False],
@@ -317,7 +318,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ B _ _
             _ _ W _
             """
-    state = gojax.decode_states(state_str, komi=(0, 0))
+    state = serialize.decode_states(state_str, komi=(0, 0))
     empty_spaces = gojax.get_empty_spaces(state)
     np.testing.assert_array_equal(empty_spaces, [[[True, False, True, True],
                                                   [False, True, False, True],
@@ -329,7 +330,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ _
             _ _ 
             """
-    state = gojax.decode_states(state_str)
+    state = serialize.decode_states(state_str)
     free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
     self.assertEqual((1, 2, 2), free_black_groups.shape)
 
@@ -338,7 +339,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             B _
             _ _ 
             """
-    state = gojax.decode_states(state_str)
+    state = serialize.decode_states(state_str)
     free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
     self.assertTrue(
       jnp.alltrue(jnp.array([[True, False], [False, False]]) == free_black_groups))
@@ -348,7 +349,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             B W
             W _ 
             """
-    state = gojax.decode_states(state_str)
+    state = serialize.decode_states(state_str)
     free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
     self.assertTrue(
       jnp.alltrue(jnp.array([[False, False], [False, False]]) == free_black_groups),
@@ -362,7 +363,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             W B W _ _
             _ _ _ _ _
             """
-    state = gojax.decode_states(state_str)
+    state = serialize.decode_states(state_str)
     free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
     self.assertTrue(jnp.alltrue(jnp.array([[False, False, False, False, False],
                                            [False, True, False, False, False],
@@ -377,7 +378,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             B _
             _ W 
             """
-    state = gojax.decode_states(state_str)
+    state = serialize.decode_states(state_str)
     free_white_groups = gojax.compute_free_groups(state, [gojax.WHITES_TURN])
     np.testing.assert_array_equal(free_white_groups, [[[False, False], [False, True]]])
 
@@ -388,13 +389,13 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ _ _ _
             _ _ _ _
             """
-    state = gojax.decode_states(state_str)
+    state = serialize.decode_states(state_str)
     with open('tests/expected_pretty_string.txt', 'r', encoding='utf8') as file:
       expected_str = file.read()
-    self.assertEqual(expected_str, gojax.get_pretty_string(state[0]))
+    self.assertEqual(expected_str, serialize.get_pretty_string(state[0]))
 
   def test_compute_areas_empty(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                             _ _ _
                             _ _ _
                             _ _ _
@@ -413,7 +414,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ _ _
             _ _ W
             """
-    state = gojax.decode_states(state_str)
+    state = serialize.decode_states(state_str)
     areas = gojax.compute_areas(state)
     np.testing.assert_array_equal(areas, [[[[True, False, False],
                                             [False, False, False],
@@ -428,7 +429,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ _ _
             _ _ _
             """
-    state = gojax.decode_states(state_str)
+    state = serialize.decode_states(state_str)
     areas = gojax.compute_areas(state)
     np.testing.assert_array_equal(areas, [[[[True, True, True],
                                             [True, True, True],
@@ -445,7 +446,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ _ B _ _
             _ _ _ _ _
             """
-    state = gojax.decode_states(state_str)
+    state = serialize.decode_states(state_str)
     areas = gojax.compute_areas(state)
     np.testing.assert_array_equal(areas, [[[[False, False, False, False, False],
                                             [False, False, True, False, False],
@@ -459,12 +460,12 @@ class LegacyGeneralTestCase(unittest.TestCase):
                                             [False, False, False, False, False]]]])
 
   def test_compute_areas_batch_size_two(self):
-    states = jnp.concatenate((gojax.decode_states("""
+    states = jnp.concatenate((serialize.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
                                             """),
-                              gojax.decode_states("""
+                              serialize.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
@@ -488,17 +489,17 @@ class LegacyGeneralTestCase(unittest.TestCase):
                                                                 ])
 
   def test_compute_areas_batch_size_three(self):
-    states = jnp.concatenate((gojax.decode_states("""
+    states = jnp.concatenate((serialize.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
                                             """),
-                              gojax.decode_states("""
+                              serialize.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
                                             """),
-                              gojax.decode_states("""
+                              serialize.decode_states("""
                                               _ _ _
                                               _ W _
                                               _ _ _
@@ -529,7 +530,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
                                                                 ])
 
   def test_compute_area_sizes_pieces(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         B _ _
                         _ _ _
                         _ _ W
@@ -537,7 +538,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_area_sizes(state), [[1, 1]])
 
   def test_compute_area_sizes_single_piece_controls_all(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         B _ _
                         _ _ _
                         _ _ _
@@ -545,7 +546,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_area_sizes(state), [[9, 0]])
 
   def test_compute_area_sizes_donut(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         _ _ _ _ _
                         _ W B _ _
                         _ B _ B _
@@ -555,12 +556,12 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_area_sizes(state), [[5, 1]])
 
   def test_compute_area_sizes_batch_size_two(self):
-    states = jnp.concatenate((gojax.decode_states("""
+    states = jnp.concatenate((serialize.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
                                             """),
-                              gojax.decode_states("""
+                              serialize.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
@@ -568,17 +569,17 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_area_sizes(states), [[0, 0], [9, 0]])
 
   def test_compute_area_sizes_batch_size_three(self):
-    states = jnp.concatenate((gojax.decode_states("""
+    states = jnp.concatenate((serialize.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
                                             """),
-                              gojax.decode_states("""
+                              serialize.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
                                             """),
-                              gojax.decode_states("""
+                              serialize.decode_states("""
                                               _ _ _
                                               _ W _
                                               _ _ _
@@ -587,7 +588,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
                                   [[0, 0], [9, 0], [0, 9]])
 
   def test_compute_winning_new_state_tie(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         _ _ _
                         _ _ _
                         _ _ _
@@ -595,7 +596,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_winning(state), [0])
 
   def test_compute_winning_single_black(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         _ _ _
                         _ B _
                         _ _ _
@@ -603,7 +604,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_winning(state), [1])
 
   def test_compute_winning_single_white(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         _ _ _
                         _ W _
                         _ _ _
@@ -611,7 +612,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_winning(state), [-1])
 
   def test_compute_winning_tie_single_pieces(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         _ _ _
                         _ W _
                         _ _ B
@@ -619,7 +620,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_winning(state), [0])
 
   def test_compute_winning_black_has_more_area_with_empty_space(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         W W _ _ _
                         W W B _ _
                         _ B _ B _
@@ -629,12 +630,12 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_winning(state), [1])
 
   def test_compute_winning_batch_size_two(self):
-    states = jnp.concatenate((gojax.decode_states("""
+    states = jnp.concatenate((serialize.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
                                             """),
-                              gojax.decode_states("""
+                              serialize.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
@@ -642,7 +643,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
     np.testing.assert_array_equal(gojax.compute_winning(states), [0, 1])
 
   def test_swap_perspectives_black_to_white(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         B _ _
                         _ _ _
                         _ _ W
@@ -660,7 +661,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
                                   [gojax.WHITES_TURN])
 
   def test_swap_perspectives_white_to_black(self):
-    state = gojax.decode_states("""
+    state = serialize.decode_states("""
                         B _ _
                         _ _ _
                         _ _ W
@@ -685,18 +686,18 @@ class LegacyGeneralTestCase(unittest.TestCase):
       nn.one_hot(jnp.arange(action_size), num_classes=board_size ** 2, dtype=bool),
       (action_size, board_size, board_size))
     children = gojax.next_states(states, indicator_actions)
-    expected_children = jnp.concatenate((gojax.decode_states("""
+    expected_children = jnp.concatenate((serialize.decode_states("""
                                                   B _ _
                                                   _ _ _
                                                   _ _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ B _
                                                   _ _ _
                                                   _ _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN)
+                                                                 turn=gojax.WHITES_TURN)
                                          ), axis=0)
 
     np.testing.assert_array_equal(children, expected_children)
@@ -709,67 +710,67 @@ class LegacyGeneralTestCase(unittest.TestCase):
       nn.one_hot(jnp.arange(action_size), num_classes=board_size ** 2, dtype=bool),
       (action_size, board_size, board_size))
     children = gojax.next_states(states, indicator_actions)
-    expected_children = jnp.concatenate((gojax.decode_states("""
+    expected_children = jnp.concatenate((serialize.decode_states("""
                                                   B _ _
                                                   _ _ _
                                                   _ _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ B _
                                                   _ _ _
                                                   _ _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ _ B
                                                   _ _ _
                                                   _ _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ _ _
                                                   B _ _
                                                   _ _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ _ _
                                                   _ B _
                                                   _ _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ _ _
                                                   _ _ B
                                                   _ _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ _ _
                                                   _ _ _
                                                   B _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ _ _
                                                   _ _ _
                                                   _ B _
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ _ _
                                                   _ _ _
                                                   _ _ B
                                                   """,
-                                                             turn=gojax.WHITES_TURN),
-                                         gojax.decode_states("""
+                                                                 turn=gojax.WHITES_TURN),
+                                         serialize.decode_states("""
                                                   _ _ _
                                                   _ _ _
                                                   _ _ _
                                                   """,
-                                                             turn=gojax.WHITES_TURN,
-                                                             passed=True),
+                                                                 turn=gojax.WHITES_TURN,
+                                                                 passed=True),
                                          )
                                         )
 

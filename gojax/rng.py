@@ -2,7 +2,6 @@ import jax
 from jax import numpy as jnp, lax
 
 import gojax
-import state_info
 
 
 def sample_actions_from_logits(states, logits, rng_key):
@@ -15,7 +14,7 @@ def sample_actions_from_logits(states, logits, rng_key):
     :param rng_key: JAX RNG key.
     :return: an N x B x B boolean one-hot array representing the sampled action (all-false = pass).
     """
-    flattened_invalids = jnp.reshape(state_info.get_invalids(states),
+    flattened_invalids = jnp.reshape(gojax.get_invalids(states),
                                      (-1, states.shape[2] * states.shape[3]))
     action_logits = jnp.where(
         jnp.append(flattened_invalids, jnp.zeros((len(states), 1), dtype=bool), axis=1),
@@ -30,7 +29,7 @@ def sample_actions_uniformly(states, rng_key):
     """
     Samples the valid actions uniformly (see sample_actions_from_logits).
     """
-    raw_action_logits = jnp.zeros((len(states), state_info.get_action_size(states)))
+    raw_action_logits = jnp.zeros((len(states), gojax.get_action_size(states)))
     return sample_actions_from_logits(states, raw_action_logits, rng_key)
 
 

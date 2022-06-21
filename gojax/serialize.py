@@ -4,7 +4,6 @@ import textwrap
 
 from jax import numpy as jnp
 
-import constants
 import gojax
 
 
@@ -15,9 +14,9 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
     for i, line in enumerate(lines):
         for j, char in enumerate(line.split()):
             if char == 'B':
-                states = states.at[0, constants.BLACK_CHANNEL_INDEX, i, j].set(True)
+                states = states.at[0, gojax.BLACK_CHANNEL_INDEX, i, j].set(True)
             elif char == 'W':
-                states = states.at[0, constants.WHITE_CHANNEL_INDEX, i, j].set(True)
+                states = states.at[0, gojax.WHITE_CHANNEL_INDEX, i, j].set(True)
         if i == board_size:
             # Extract metadata.
             for key_value in line.split(';'):
@@ -46,21 +45,21 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
                     raise ValueError(f'Unknown macro: {key}')
 
     # Set the turn.
-    states = states.at[0, constants.TURN_CHANNEL_INDEX].set(turn)
+    states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(turn)
     # Set invalid moves.
-    states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
+    states = states.at[:, gojax.INVALID_CHANNEL_INDEX].set(
         gojax.compute_invalid_actions(states, jnp.zeros_like(states[:, 0])))
     if komi:
-        states = states.at[0, constants.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
+        states = states.at[0, gojax.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
     # Set passed.
-    states = states.at[0, constants.PASS_CHANNEL_INDEX].set(passed)
+    states = states.at[0, gojax.PASS_CHANNEL_INDEX].set(passed)
     # Set ended.
-    states = states.at[0, constants.END_CHANNEL_INDEX].set(ended)
+    states = states.at[0, gojax.END_CHANNEL_INDEX].set(ended)
 
     return states
 
 
-def decode_states(serialized_states: str, turn: bool = constants.BLACKS_TURN, passed: bool = False,
+def decode_states(serialized_states: str, turn: bool = gojax.BLACKS_TURN, passed: bool = False,
                   komi=None, ended: bool = False):
     """
     Creates game boards from a human-readable serialzied string.
@@ -140,9 +139,9 @@ def get_pretty_string(state):
         board_str += f'{i}\t'
         for j in range(size):
             # First character
-            if state[constants.BLACK_CHANNEL_INDEX, i, j]:
+            if state[gojax.BLACK_CHANNEL_INDEX, i, j]:
                 board_str += '○'
-            elif state[constants.WHITE_CHANNEL_INDEX, i, j]:
+            elif state[gojax.WHITE_CHANNEL_INDEX, i, j]:
                 board_str += '●'
             else:
                 board_str += _get_second_character_go_pretty_string(i, j, size)
@@ -156,9 +155,9 @@ def get_pretty_string(state):
         board_str += '\n'
 
     areas = gojax.compute_area_sizes(jnp.expand_dims(state, 0))
-    done = jnp.alltrue(state[constants.END_CHANNEL_INDEX])
-    previous_player_passed = jnp.alltrue(state[constants.PASS_CHANNEL_INDEX])
-    turn = jnp.alltrue(state[constants.TURN_CHANNEL_INDEX])
+    done = jnp.alltrue(state[gojax.END_CHANNEL_INDEX])
+    previous_player_passed = jnp.alltrue(state[gojax.PASS_CHANNEL_INDEX])
+    turn = jnp.alltrue(state[gojax.TURN_CHANNEL_INDEX])
     if done:
         game_state = 'END'
     elif previous_player_passed:

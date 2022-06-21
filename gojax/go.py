@@ -30,7 +30,7 @@ def at_pieces_per_turn(states, turns):
     :param turns: a boolean array of length N indicating which pieces to reference per state.
     :return: an update reference array of shape N x B x B.
     """
-    return states.at[jnp.arange(states.shape[0]), jnp.array(turns, dtype='uint8')]
+    return states.at[jnp.arange(states.shape[0]), turns.astype('uint8')]
 
 
 def at_location_per_turn(states, turns, row, col):
@@ -45,10 +45,9 @@ def at_location_per_turn(states, turns, row, col):
     :param col: integer column index.
     :return: a scalar update reference.
     """
-    return states.at[
-        jnp.arange(states.shape[0]), jnp.array(turns, dtype='uint8'), jnp.full(states.shape[0],
-                                                                               row), jnp.full(
-            states.shape[0], col)]
+    return states.at[jnp.arange(states.shape[0]), turns.astype('uint8'), jnp.full(states.shape[0],
+                                                                                  row), jnp.full(
+        states.shape[0], col)]
 
 
 def action_2d_indices_to_indicator(actions, states):

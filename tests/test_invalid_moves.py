@@ -73,7 +73,7 @@ class InvalidMovesTestCase(unittest.TestCase):
         state = serialize.decode_states(state_str, gojax.BLACKS_TURN)
         action1d = 0
         my_killed_pieces = jnp.zeros((1, 4, 4), dtype=bool)
-        self.assertFalse(gojax.compute_actions_are_invalid(state, action1d, my_killed_pieces))
+        self.assertFalse(gojax.compute_actions1d_are_invalid(state, action1d, my_killed_pieces))
 
     def test_get_action_is_invalid_komi(self):
         state_str = """
@@ -86,7 +86,7 @@ class InvalidMovesTestCase(unittest.TestCase):
         action1d = 6
         my_killed_pieces = jnp.array([[[False, False, False, False], [False, False, True, False],
                                        [False, False, False, False], [False, False, False, False]]])
-        self.assertTrue(gojax.compute_actions_are_invalid(state, action1d, my_killed_pieces))
+        self.assertTrue(gojax.compute_actions1d_are_invalid(state, action1d, my_killed_pieces))
 
     def test_komi(self):
         state_str = """

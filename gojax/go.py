@@ -193,7 +193,7 @@ def compute_winning(states):
                      -jnp.squeeze(jnp.diff(jnp.sum(compute_areas(states), axis=(2, 3))), axis=1), 1)
 
 
-def compute_actions_are_invalid(states, action_1d, my_killed_pieces):
+def compute_actions1d_are_invalid(states, action_1d, my_killed_pieces):
     """
     Computes whether the given actions are valid for each state.
 
@@ -249,7 +249,7 @@ def compute_invalid_actions(states, my_killed_pieces):
     :return: an N x B x B indicator array of invalid moves.
     """
 
-    invalid_moves = jax.vmap(compute_actions_are_invalid, (None, 0, None), 1)(states, jnp.arange(
+    invalid_moves = jax.vmap(compute_actions1d_are_invalid, (None, 0, None), 1)(states, jnp.arange(
         states.shape[2] * states.shape[3]), my_killed_pieces)
     return jnp.reshape(invalid_moves, (states.shape[0], states.shape[2], states.shape[3]))
 
@@ -313,7 +313,7 @@ def next_states(states, indicator_actions):
     # Set game ended.
     states = states.at[:, constants.END_CHANNEL_INDEX].set(previously_passed & passed)
 
-    # Revert back to original state if the original state already ended or the action is invalid.
+    # Revert to original state if the original state already ended or the action is invalid.
     states = jnp.where(jnp.expand_dims(
         state_info.get_ended(checkpoint_states) | _move_is_invalid(checkpoint_states,
                                                                    indicator_actions), (1, 2, 3)),

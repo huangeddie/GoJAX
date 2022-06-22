@@ -224,7 +224,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ _ 
             """
         state = serialize.decode_states(state_str)
-        free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
+        free_black_groups = gojax.compute_free_groups(state, jnp.array([gojax.BLACKS_TURN]))
         self.assertEqual((1, 2, 2), free_black_groups.shape)
 
     def test_get_free_groups_free_single_piece(self):
@@ -233,7 +233,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ _ 
             """
         state = serialize.decode_states(state_str)
-        free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
+        free_black_groups = gojax.compute_free_groups(state, jnp.array([gojax.BLACKS_TURN]))
         self.assertTrue(
             jnp.alltrue(jnp.array([[True, False], [False, False]]) == free_black_groups))
 
@@ -243,7 +243,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             W _ 
             """
         state = serialize.decode_states(state_str)
-        free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
+        free_black_groups = gojax.compute_free_groups(state, jnp.array([gojax.BLACKS_TURN]))
         self.assertTrue(
             jnp.alltrue(jnp.array([[False, False], [False, False]]) == free_black_groups),
             free_black_groups)
@@ -257,7 +257,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ _ _ _ _
             """
         state = serialize.decode_states(state_str)
-        free_black_groups = gojax.compute_free_groups(state, [gojax.BLACKS_TURN])
+        free_black_groups = gojax.compute_free_groups(state, jnp.array([gojax.BLACKS_TURN]))
         self.assertTrue(jnp.alltrue(jnp.array(
             [[False, False, False, False, False], [False, True, False, False, False],
              [False, True, False, False, False], [False, True, False, False, False],
@@ -269,7 +269,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
             _ W 
             """
         state = serialize.decode_states(state_str)
-        free_white_groups = gojax.compute_free_groups(state, [gojax.WHITES_TURN])
+        free_white_groups = gojax.compute_free_groups(state, jnp.array([gojax.WHITES_TURN]))
         np.testing.assert_array_equal(free_white_groups, [[[False, False], [False, True]]])
 
     def test_get_pretty_string(self):

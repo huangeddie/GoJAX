@@ -219,20 +219,50 @@ def compute_actions1d_are_invalid(states, action_1d, my_killed_pieces):
     """
     row = jnp.floor_divide(action_1d, states.shape[2])
     col = jnp.remainder(action_1d, states.shape[3])
+    indicator_actions = jnp.zeros((len(states), states.shape[2], states.shape[3]), dtype=bool)
+    indicator_actions = indicator_actions.at[:, row, col].set(True)
+    return compute_indicator_actions_are_invalid(states, indicator_actions, my_killed_pieces)
+
+
+def compute_indicator_actions_are_invalid(states, indicator_actions, my_killed_pieces):
+    """
+    Computes whether the given actions are valid for each state.
+
+    An action is invalid if any of the following are met:
+    • The space is occupied by a piece.
+    • The action does not remove any opponent groups and the resulting group has no liberties.
+    • The move is blocked by Komi.
+
+    Komi is defined as a special type of invalid move where the following criteria are met:
+    • The previous move by the opponent killed exactly one of our pieces.
+    • The move would 'revive' said single killed piece, that is the move is the same location
+    where our piece died.
+    • The move would kill exactly one of the opponent's pieces.
+
+    :param states: a batch array of N Go games.
+    :param indicator_actions: an N x B x B partial one-hot boolean array of actions.
+    the action would be `row x B + col`. The actions are in 1D form so that this function can be
+    `jax.vmap`-ed.
+    :param my_killed_pieces: an N x B x B indicator array for pieces that were killed from the
+    previous state.
+    :return: a boolean array of length N indicating whether the moves are invalid.
+    """
     turns = state_info.get_turns(states)
     opponents = ~turns
-    ghost_next_states = at_location_per_turn(states, turns, row, col).set(True)
+    ghost_next_states = at_pieces_per_turn(states, turns).set(
+        indicator_actions | state_info.get_pieces_per_turn(states, turns))
     ghost_maybe_kill = at_pieces_per_turn(ghost_next_states, opponents).set(
         compute_free_groups(ghost_next_states, opponents))
     ghost_killed = jnp.logical_xor(state_info.get_pieces_per_turn(ghost_next_states, opponents),
                                    state_info.get_pieces_per_turn(ghost_maybe_kill, opponents))
     num_casualties = jnp.sum(my_killed_pieces, axis=(1, 2))
     num_ghost_kills = jnp.sum(ghost_killed, axis=(1, 2))
-    komi = (num_ghost_kills == jnp.ones_like(num_ghost_kills)) & my_killed_pieces[:, row, col] & (
-            num_casualties == jnp.ones_like(num_casualties))
+    komi = (num_ghost_kills == jnp.ones_like(num_ghost_kills)) & jnp.sum(
+        my_killed_pieces & indicator_actions, axis=(1, 2)) & (
+                   num_casualties == jnp.ones_like(num_casualties))
     occupied = jnp.sum(
-        states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX], row, col], axis=1,
-        dtype=bool)
+        jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]], axis=1,
+                dtype=bool) & indicator_actions, axis=(1, 2))
     no_liberties = jnp.sum(jnp.logical_xor(compute_free_groups(ghost_maybe_kill, turns),
                                            state_info.get_pieces_per_turn(ghost_maybe_kill, turns)),
                            axis=(1, 2), dtype=bool)
@@ -307,7 +337,7 @@ def next_states(states, indicator_actions):
     states = states.at[:, constants.PASS_CHANNEL_INDEX].set(passed)
 
     # Set invalid moves.
-    states = states.at[:, constants.INVALID_CHANNEL_INDEX].set(
+    states = states.at[:, constants.KILLED_CHANNEL_INDEX].set(
         compute_invalid_actions(states, kill_pieces))
 
     # Set game ended.

@@ -81,7 +81,7 @@ class LegacyGeneralTestCase(unittest.TestCase):
 
     def test_get_invalids(self):
         states = gojax.new_states(2, batch_size=2)
-        states = states.at[1, gojax.INVALID_CHANNEL_INDEX].set(True)
+        states = states.at[1, gojax.KILLED_CHANNEL_INDEX].set(True)
         self.assertTrue(jnp.alltrue(gojax.get_invalids(states) == jnp.array(
             [[[False, False], [False, False]], [[True, True], [True, True]]])))
 

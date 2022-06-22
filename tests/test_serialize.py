@@ -176,7 +176,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = serialize.decode_states(state_str, komi=(0, 0))
-        self.assertTrue(state[0, gojax.INVALID_CHANNEL_INDEX, 0, 0])
+        self.assertTrue(state[0, gojax.KILLED_CHANNEL_INDEX, 0, 0])
 
 
 if __name__ == '__main__':

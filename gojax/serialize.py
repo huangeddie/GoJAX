@@ -47,10 +47,10 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
     # Set the turn.
     states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(turn)
     # Set invalid moves.
-    states = states.at[:, gojax.INVALID_CHANNEL_INDEX].set(
+    states = states.at[:, gojax.KILLED_CHANNEL_INDEX].set(
         gojax.compute_invalid_actions(states, jnp.zeros_like(states[:, 0])))
     if komi:
-        states = states.at[0, gojax.INVALID_CHANNEL_INDEX, komi[0], komi[1]].set(True)
+        states = states.at[0, gojax.KILLED_CHANNEL_INDEX, komi[0], komi[1]].set(True)
     # Set passed.
     states = states.at[0, gojax.PASS_CHANNEL_INDEX].set(passed)
     # Set ended.

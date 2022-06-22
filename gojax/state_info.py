@@ -50,7 +50,7 @@ def get_invalids(states):
     :return: an N x B x B boolean array.
     """
 
-    return states[:, constants.INVALID_CHANNEL_INDEX]
+    return states[:, constants.KILLED_CHANNEL_INDEX]
 
 
 def get_passes(states):

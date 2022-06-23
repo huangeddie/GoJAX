@@ -110,12 +110,10 @@ class LegacyGeneralTestCase(unittest.TestCase):
     def test_black_and_white_moves_in_batch(self):
         states = gojax.new_states(4, batch_size=2)
         states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
-        self.assertTrue(jnp.alltrue(gojax.get_turns(states) == jnp.array([True, False])),
-                        gojax.get_turns(states))
+        np.testing.assert_array_equal(gojax.get_turns(states), [True, False])
         states = gojax.next_states(states,
                                    gojax.action_2d_indices_to_indicator([None, None], states))
-        self.assertTrue(jnp.alltrue(gojax.get_turns(states) == jnp.array([False, True])),
-                        gojax.get_turns(states))
+        np.testing.assert_array_equal(gojax.get_turns(states), [False, True])
 
     def test_pass_changes_turn(self):
         state = gojax.new_states(2)

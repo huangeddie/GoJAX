@@ -65,6 +65,7 @@ class InvalidMovesTestCase(unittest.TestCase):
             next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
         np.testing.assert_array_equal(gojax.get_turns(state), [gojax.BLACKS_TURN])
         np.testing.assert_array_equal(gojax.get_turns(next_state), [gojax.WHITES_TURN])
+        np.testing.assert_array_equal(gojax.get_passes(next_state), [True])
 
     def test_compute_invalid_actions_for_two_states(self):
         states = jnp.concatenate((serialize.decode_states("""

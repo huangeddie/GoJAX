@@ -326,10 +326,11 @@ def next_states(states, indicator_actions):
     next_states_ = partial_next_states.at[:, constants.END_CHANNEL_INDEX].set(
         previously_passed & passed)
 
-    # If the action is invalid or the game ended, return the same state with just the turn
-    # changed, otherwise return what would be the next state.
+    # If the action is invalid or the game ended, set the move to pass, otherwise return what
+    # would be the next state.
     return jnp.where(jnp.expand_dims(invalid_actions | state_info.get_ended(states), (1, 2, 3)),
-                     _change_turns(states), next_states_)
+                     _change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True),
+                     next_states_)
 
 
 def _change_turns(states):

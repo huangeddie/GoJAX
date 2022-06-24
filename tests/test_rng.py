@@ -34,6 +34,7 @@ class RNGTestCase(chex.TestCase):
                                                                 _ _ _
                                                                 _ _ _
                                                                 _ B B
+                                                                PASS=T
                                                                 """))
 
 

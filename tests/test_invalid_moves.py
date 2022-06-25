@@ -14,6 +14,7 @@ from jax import numpy as jnp
 
 import gojax
 import serialize
+import state_index
 
 
 class InvalidMovesTestCase(unittest.TestCase):
@@ -50,7 +51,8 @@ class InvalidMovesTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = serialize.decode_states(state_str, gojax.BLACKS_TURN)
-        next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(1, 2)], state))
+        next_state = gojax.next_states(state,
+                                       state_index.action_2d_indices_to_indicator([(1, 2)], state))
         self.assertTrue(next_state[:, gojax.KILLED_CHANNEL_INDEX, 1, 1])
 
     def test_invalid_move_no_op_pieces(self):
@@ -59,7 +61,8 @@ class InvalidMovesTestCase(unittest.TestCase):
                                 _ W _
                                 _ _ _
                                 """, gojax.BLACKS_TURN)
-        next_state = gojax.next_states(state, gojax.action_2d_indices_to_indicator([(1, 1)], state))
+        next_state = gojax.next_states(state,
+                                       state_index.action_2d_indices_to_indicator([(1, 1)], state))
         np.testing.assert_array_equal(
             state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
             next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])

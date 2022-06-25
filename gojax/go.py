@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from jax import lax
 
 from gojax import constants
-from gojax import state_info
+from gojax import state_index
 
 
 def new_states(board_size, batch_size=1):
@@ -18,69 +18,6 @@ def new_states(board_size, batch_size=1):
     """
     state = jnp.zeros((batch_size, constants.NUM_CHANNELS, board_size, board_size), dtype=bool)
     return state
-
-
-def at_pieces_per_turn(states, turns):
-    """
-    Update reference to the black/white pieces of the states.
-
-    See `get_pieces_per_turn` to get a read-only view of the pieces.
-
-    :param states: an array of N Go games.
-    :param turns: a boolean array of length N indicating which pieces to reference per state.
-    :return: an update reference array of shape N x B x B.
-    """
-    return states.at[jnp.arange(states.shape[0]), turns.astype('uint8')]
-
-
-def at_location_per_turn(states, turns, row, col):
-    """
-    Update reference to specific turn-wise locations of the states.
-
-    A more specific version of `at_pieces_per_turn`.
-
-    :param states: an array of N Go games.
-    :param turns: a boolean array of length N indicating which pieces to reference per state.
-    :param row: integer row index.
-    :param col: integer column index.
-    :return: a scalar update reference.
-    """
-    return states.at[jnp.arange(states.shape[0]), turns.astype('uint8'), jnp.full(states.shape[0],
-                                                                                  row), jnp.full(
-        states.shape[0], col)]
-
-
-def action_2d_indices_to_indicator(actions, states):
-    """
-    Converts an array of action indices into their sparse indicator array form.
-
-    :param actions: a list of N actions. Each element is either pass (None), or a tuple of
-    integers representing a row,
-    column coordinate.
-    :param states: a batch array of N Go games.
-    :return: a (N x B x B) sparse array representing indicator actions for each state.
-    """
-    indicator_actions = jnp.zeros((states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
-    for i, action in enumerate(actions):
-        if action is None:
-            continue
-        indicator_actions = indicator_actions.at[i, action[0], action[1]].set(True)
-    return indicator_actions
-
-
-def action_indicators_to_indices(indicator_actions):
-    """
-    Converts an array of indicator actions to their corresponding action indices.
-
-    :param indicator_actions: n (N x B x B) sparse array. If the values are present, the action
-    is a pass.
-    :return: an integer array of length N.
-    """
-    passes = ~jnp.sum(indicator_actions, axis=(1, 2), dtype=bool)
-    one_hot_actions = jnp.concatenate(
-        (jnp.reshape(indicator_actions, (len(indicator_actions), -1)), jnp.expand_dims(passes, 1)),
-        axis=1)
-    return jnp.argmax(one_hot_actions, axis=1)
 
 
 def _paint_fill(seeds, areas):
@@ -125,8 +62,8 @@ def compute_free_groups(states, turns):
     :param turns: a boolean array of length N.
     :return: an N x B x B boolean array.
     """
-    pieces = jnp.expand_dims(state_info.get_pieces_per_turn(states, turns), 1)
-    empty_spaces = state_info.get_empty_spaces(states, keepdims=True)  # N x 1 x B x B array.
+    pieces = jnp.expand_dims(state_index.get_pieces_per_turn(states, turns), 1)
+    empty_spaces = state_index.get_empty_spaces(states, keepdims=True)  # N x 1 x B x B array.
     immediate_free_pieces = jnp.logical_and(
         lax.conv(empty_spaces.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL, (1, 1),
                  padding='same'), pieces)
@@ -150,7 +87,7 @@ def compute_areas(states):
     """
     black_pieces = states[:, constants.BLACK_CHANNEL_INDEX]
     white_pieces = states[:, constants.WHITE_CHANNEL_INDEX]
-    empty_spaces = state_info.get_empty_spaces(states, keepdims=True)
+    empty_spaces = state_index.get_empty_spaces(states, keepdims=True)
 
     immediately_connected_to_black_pieces = jnp.logical_and(
         lax.conv(jnp.expand_dims(black_pieces, 1).astype('bfloat16'),
@@ -218,15 +155,15 @@ def compute_indicator_actions_are_invalid(states, indicator_actions):
         and killed channel set.
             • would need to update the turn, pass, and end channels.
     """
-    turns = state_info.get_turns(states)
+    turns = state_index.get_turns(states)
     opponents = ~turns
-    piece_added = at_pieces_per_turn(states, turns).set(
-        indicator_actions | state_info.get_pieces_per_turn(states, turns))
-    piece_added_and_opponents_removed = at_pieces_per_turn(piece_added, opponents).set(
+    piece_added = state_index.at_pieces_per_turn(states, turns).set(
+        indicator_actions | state_index.get_pieces_per_turn(states, turns))
+    piece_added_and_opponents_removed = state_index.at_pieces_per_turn(piece_added, opponents).set(
         compute_free_groups(piece_added, opponents))
-    ghost_killed = jnp.logical_xor(state_info.get_pieces_per_turn(piece_added, opponents),
-                                   state_info.get_pieces_per_turn(piece_added_and_opponents_removed,
-                                                                  opponents))
+    ghost_killed = jnp.logical_xor(state_index.get_pieces_per_turn(piece_added, opponents),
+                                   state_index.get_pieces_per_turn(
+                                       piece_added_and_opponents_removed, opponents))
     previously_killed_pieces = states[:, constants.KILLED_CHANNEL_INDEX]
     num_casualties = jnp.sum(previously_killed_pieces, axis=(1, 2))
     num_ghost_kills = jnp.sum(ghost_killed, axis=(1, 2))
@@ -238,7 +175,7 @@ def compute_indicator_actions_are_invalid(states, indicator_actions):
                 dtype=bool) & indicator_actions, axis=(1, 2))
     no_liberties = jnp.sum(
         jnp.logical_xor(compute_free_groups(piece_added_and_opponents_removed, turns),
-                        state_info.get_pieces_per_turn(piece_added_and_opponents_removed, turns)),
+                        state_index.get_pieces_per_turn(piece_added_and_opponents_removed, turns)),
         axis=(1, 2), dtype=bool)
 
     partial_next_states = piece_added_and_opponents_removed.at[:,
@@ -300,7 +237,7 @@ def _move_is_invalid(states, indicator_actions):
     then it's considered a pass.
     :return: a boolean array of length N.
     """
-    return jnp.sum(state_info.get_invalids(states) & indicator_actions, axis=(1, 2), dtype=bool)
+    return jnp.sum(state_index.get_invalids(states) & indicator_actions, axis=(1, 2), dtype=bool)
 
 
 def next_states(states, indicator_actions):
@@ -328,7 +265,7 @@ def next_states(states, indicator_actions):
 
     # If the action is invalid or the game ended, set the move to pass, otherwise return what
     # would be the next state.
-    return jnp.where(jnp.expand_dims(invalid_actions | state_info.get_ended(states), (1, 2, 3)),
+    return jnp.where(jnp.expand_dims(invalid_actions | state_index.get_ended(states), (1, 2, 3)),
                      _change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True),
                      next_states_)
 

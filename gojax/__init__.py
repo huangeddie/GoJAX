@@ -2,6 +2,6 @@
 
 from .constants import *
 from .go import *
-from .state_info import *
+from .state_index import *
 from .rng import *
 from .serialize import *

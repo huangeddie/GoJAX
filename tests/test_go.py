@@ -31,27 +31,6 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(new_states, expected_output)
         chex.assert_type(new_states, bool)
 
-    def test_get_turns(self):
-        states = gojax.new_states(2, batch_size=2)
-        states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
-        self.assertTrue(jnp.alltrue(gojax.get_turns(states) == jnp.array([True, False])))
-
-    def test_get_invalids(self):
-        states = gojax.new_states(2, batch_size=2)
-        states = states.at[1, gojax.KILLED_CHANNEL_INDEX].set(True)
-        self.assertTrue(jnp.alltrue(gojax.get_invalids(states) == jnp.array(
-            [[[False, False], [False, False]], [[True, True], [True, True]]])))
-
-    def test_get_passes(self):
-        states = gojax.new_states(2, batch_size=2)
-        states = states.at[0, gojax.PASS_CHANNEL_INDEX].set(True)
-        self.assertTrue(jnp.alltrue(gojax.get_passes(states) == jnp.array([True, False])))
-
-    def test_get_ended_false(self):
-        states = gojax.new_states(2, batch_size=2)
-        states = states.at[0, gojax.END_CHANNEL_INDEX].set(True)
-        self.assertTrue(jnp.alltrue(gojax.get_ended(states) == jnp.array([True, False])))
-
     def test_white_moves_second(self):
         state = gojax.new_states(4)
         state = gojax.next_states(state,
@@ -141,41 +120,9 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(gojax.get_ended(states), [False, True])
         np.testing.assert_array_equal(gojax.get_ended(next_states), [False, True])
 
-    def test_get_occupied_spaces(self):
-        state_str = """
-            _ B _ _
-            B _ B _
-            _ B _ _
-            _ _ W _
-            """
-        state = serialize.decode_states(state_str, komi=(0, 0))
-        occupied_spaces = gojax.get_occupied_spaces(state)
-        np.testing.assert_array_equal(occupied_spaces, [
-            [[False, True, False, False], [True, False, True, False], [False, True, False, False],
-             [False, False, True, False]]])
 
-    def test_get_empty_spaces_shape_squeeze(self):
-        empty_spaces = gojax.get_empty_spaces(gojax.new_states(board_size=3))
-        chex.assert_shape(empty_spaces, (1, 3, 3))
 
-    def test_get_empty_spaces_shape_keepdims(self):
-        empty_spaces = gojax.get_empty_spaces(gojax.new_states(board_size=3), keepdims=True)
-        chex.assert_shape(empty_spaces, (1, 1, 3, 3))
-
-    def test_get_empty_spaces(self):
-        state_str = """
-            _ B _ _
-            B _ B _
-            _ B _ _
-            _ _ W _
-            """
-        state = serialize.decode_states(state_str, komi=(0, 0))
-        empty_spaces = gojax.get_empty_spaces(state)
-        np.testing.assert_array_equal(empty_spaces, [
-            [[True, False, True, True], [False, True, False, True], [True, False, True, True],
-             [True, True, False, True]]])
-
-    def test_get_free_groups_shape(self):
+    def test_compute_free_groups_shape(self):
         state_str = """
             _ _
             _ _ 
@@ -184,7 +131,7 @@ class GoTestCase(chex.TestCase):
         free_black_groups = gojax.compute_free_groups(state, jnp.array([gojax.BLACKS_TURN]))
         self.assertEqual((1, 2, 2), free_black_groups.shape)
 
-    def test_get_free_groups_free_single_piece(self):
+    def test_compute_free_groups_free_single_piece(self):
         state_str = """
             B _
             _ _ 
@@ -194,7 +141,7 @@ class GoTestCase(chex.TestCase):
         self.assertTrue(
             jnp.alltrue(jnp.array([[True, False], [False, False]]) == free_black_groups))
 
-    def test_get_free_groups_non_free_single_piece(self):
+    def test_compute_free_groups_non_free_single_piece(self):
         state_str = """
             B W
             W _ 
@@ -205,7 +152,7 @@ class GoTestCase(chex.TestCase):
             jnp.alltrue(jnp.array([[False, False], [False, False]]) == free_black_groups),
             free_black_groups)
 
-    def test_get_free_groups_free_chain(self):
+    def test_compute_free_groups_free_chain(self):
         state_str = """
             _ W _ _ _
             W B W _ _
@@ -220,7 +167,7 @@ class GoTestCase(chex.TestCase):
              [False, True, False, False, False], [False, True, False, False, False],
              [False, False, False, False, False], ]) == free_black_groups), free_black_groups)
 
-    def test_get_free_groups_white(self):
+    def test_compute_free_groups_white(self):
         state_str = """
             B _
             _ W 

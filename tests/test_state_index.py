@@ -47,6 +47,61 @@ class StateIndexTestCase(chex.TestCase):
         np.testing.assert_array_equal(indicator_actions, expected_output)
         chex.assert_type(indicator_actions, bool)
 
+    def test_get_turns(self):
+        states = gojax.new_states(2, batch_size=2)
+        states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
+        self.assertTrue(jnp.alltrue(gojax.get_turns(states) == jnp.array([True, False])))
+
+    def test_get_invalids(self):
+        states = gojax.new_states(2, batch_size=2)
+        states = states.at[1, gojax.KILLED_CHANNEL_INDEX].set(True)
+        self.assertTrue(jnp.alltrue(gojax.get_invalids(states) == jnp.array(
+            [[[False, False], [False, False]], [[True, True], [True, True]]])))
+
+    def test_get_passes(self):
+        states = gojax.new_states(2, batch_size=2)
+        states = states.at[0, gojax.PASS_CHANNEL_INDEX].set(True)
+        self.assertTrue(jnp.alltrue(gojax.get_passes(states) == jnp.array([True, False])))
+
+    def test_get_ended_false(self):
+        states = gojax.new_states(2, batch_size=2)
+        states = states.at[0, gojax.END_CHANNEL_INDEX].set(True)
+        self.assertTrue(jnp.alltrue(gojax.get_ended(states) == jnp.array([True, False])))
+
+    def test_get_occupied_spaces(self):
+        state_str = """
+            _ B _ _
+            B _ B _
+            _ B _ _
+            _ _ W _
+            """
+        state = gojax.decode_states(state_str, komi=(0, 0))
+        occupied_spaces = gojax.get_occupied_spaces(state)
+        np.testing.assert_array_equal(occupied_spaces, [
+            [[False, True, False, False], [True, False, True, False], [False, True, False, False],
+             [False, False, True, False]]])
+
+    def test_get_empty_spaces_shape_squeeze(self):
+        empty_spaces = gojax.get_empty_spaces(gojax.new_states(board_size=3))
+        chex.assert_shape(empty_spaces, (1, 3, 3))
+
+    def test_get_empty_spaces_shape_keepdims(self):
+        empty_spaces = gojax.get_empty_spaces(gojax.new_states(board_size=3), keepdims=True)
+        chex.assert_shape(empty_spaces, (1, 1, 3, 3))
+
+    def test_get_empty_spaces(self):
+        state_str = """
+            _ B _ _
+            B _ B _
+            _ B _ _
+            _ _ W _
+            """
+        state = gojax.decode_states(state_str, komi=(0, 0))
+        empty_spaces = gojax.get_empty_spaces(state)
+        np.testing.assert_array_equal(empty_spaces, [
+            [[True, False, True, True], [False, True, False, True], [True, False, True, True],
+             [True, True, False, True]]])
+
 
 if __name__ == '__main__':
     unittest.main()

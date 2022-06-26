@@ -71,7 +71,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                                     _ _
                                     KOMI=0,1
                                     """)
-        np.testing.assert_array_equal(gojax.get_invalids(state), [[[False, True], [False, False]]])
+        np.testing.assert_array_equal(gojax.get_killed(state), [[[False, True], [False, False]]])
 
     def test_macro_end(self):
         state = serialize.decode_states("""
@@ -89,7 +89,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                                     """)
         np.testing.assert_array_equal(gojax.get_turns(state), [True])
         np.testing.assert_array_equal(gojax.get_passes(state), [True])
-        np.testing.assert_array_equal(gojax.get_invalids(state), [[[False, False], [False, True]]])
+        np.testing.assert_array_equal(gojax.get_killed(state), [[[False, False], [False, True]]])
         np.testing.assert_array_equal(gojax.get_ended(state), [True])
 
     def test_turn(self):

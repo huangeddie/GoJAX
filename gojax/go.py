@@ -226,20 +226,6 @@ def compute_invalid_actions(states):
     return jnp.reshape(invalid_moves, (states.shape[0], states.shape[2], states.shape[3]))
 
 
-def _move_is_invalid(states, indicator_actions):
-    """
-    Gets whether the actions are invalid for the corresponding states.
-
-    :param states: a batch array of N Go games.
-    :param indicator_actions: A (N x B x B) indicator array. For each state
-    in the batch, there should be at most one non-zero element representing the move. If all
-    elements are 0,
-    then it's considered a pass.
-    :return: a boolean array of length N.
-    """
-    return jnp.sum(state_index.get_invalids(states) & indicator_actions, axis=(1, 2), dtype=bool)
-
-
 def next_states(states, indicator_actions):
     """
     Compute the next batch of states in Go.

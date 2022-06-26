@@ -14,7 +14,28 @@ def sample_all_actions(states, logits, rng_key):
     :param rng_key: JAX RNG key.
     :return: an N x B x B boolean one-hot array representing the sampled action (all-false = pass).
     """
-    flattened_invalids = jnp.reshape(gojax.get_invalids(states),
+    flattened_invalids = jnp.reshape(gojax.get_killed(states),
+                                     (-1, states.shape[2] * states.shape[3]))
+    action_logits = jnp.where(
+        jnp.append(flattened_invalids, jnp.zeros((len(states), 1), dtype=bool), axis=1),
+        jnp.full_like(logits, float('-inf')), logits)
+    action_1d = jax.random.categorical(rng_key, action_logits)
+    one_hot_action_1d = jax.nn.one_hot(action_1d, action_logits.shape[1], dtype=bool)
+    actions = jnp.reshape(one_hot_action_1d[:, :-1], (-1, states.shape[2], states.shape[3]))
+    return actions
+
+
+def sample_non_occupied_actions(states, logits, rng_key):
+    """
+    Samples the valid actions from the logits with probability equal to softmax(
+    raw_action_logits).
+
+    :param states: a batch array of N Go games.
+    :param logits: an N x A float array of logits.
+    :param rng_key: JAX RNG key.
+    :return: an N x B x B boolean one-hot array representing the sampled action (all-false = pass).
+    """
+    flattened_invalids = jnp.reshape(gojax.get_killed(states),
                                      (-1, states.shape[2] * states.shape[3]))
     action_logits = jnp.where(
         jnp.append(flattened_invalids, jnp.zeros((len(states), 1), dtype=bool), axis=1),

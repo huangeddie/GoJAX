@@ -42,9 +42,9 @@ def get_turns(states):
     return jnp.alltrue(states[:, constants.TURN_CHANNEL_INDEX], axis=(1, 2))
 
 
-def get_invalids(states):
+def get_killed(states):
     """
-    Gets the invalid moves for each state in states.
+    Gets the previously killed pieces for each state in states.
 
     :param states: a batch array of N Go games.
     :return: an N x B x B boolean array.

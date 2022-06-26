@@ -47,23 +47,23 @@ class StateIndexTestCase(chex.TestCase):
         np.testing.assert_array_equal(indicator_actions, expected_output)
         chex.assert_type(indicator_actions, bool)
 
-    def test_get_turns(self):
+    def test_get_turns_channel_index(self):
         states = gojax.new_states(2, batch_size=2)
         states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
         self.assertTrue(jnp.alltrue(gojax.get_turns(states) == jnp.array([True, False])))
 
-    def test_get_invalids(self):
+    def test_get_killed_channel_index(self):
         states = gojax.new_states(2, batch_size=2)
         states = states.at[1, gojax.KILLED_CHANNEL_INDEX].set(True)
-        self.assertTrue(jnp.alltrue(gojax.get_invalids(states) == jnp.array(
+        self.assertTrue(jnp.alltrue(gojax.get_killed(states) == jnp.array(
             [[[False, False], [False, False]], [[True, True], [True, True]]])))
 
-    def test_get_passes(self):
+    def test_get_passes_channel_index(self):
         states = gojax.new_states(2, batch_size=2)
         states = states.at[0, gojax.PASS_CHANNEL_INDEX].set(True)
         self.assertTrue(jnp.alltrue(gojax.get_passes(states) == jnp.array([True, False])))
 
-    def test_get_ended_false(self):
+    def test_get_ended_channel_index(self):
         states = gojax.new_states(2, batch_size=2)
         states = states.at[0, gojax.END_CHANNEL_INDEX].set(True)
         self.assertTrue(jnp.alltrue(gojax.get_ended(states) == jnp.array([True, False])))

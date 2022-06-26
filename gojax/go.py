@@ -20,7 +20,7 @@ def new_states(board_size, batch_size=1):
     return state
 
 
-def _paint_fill(seeds, areas, steps):
+def _paint_fill(seeds, areas):
     """
     Paint fills the seeds to expand as much area as they can expand to in all 4 cardinal directions.
 
@@ -31,17 +31,25 @@ def _paint_fill(seeds, areas, steps):
 
     :param seeds: an N x 1 x B x B boolean array where the True entries are the seeds.
     :param areas: an N x 1 x B x B boolean array where the True entries are areas.
-    :param steps: Number of steps to execute. This should be at least the height + width of areas
-    (i.e. 2B).
     :return: an N x 1 x B x B boolean array.
     """
+    second_expansion = jnp.logical_and(
+        lax.conv(seeds.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL,
+                 window_strides=(1, 1), padding='same').astype(bool), areas)
+    last_two_expansions = jnp.stack([seeds, second_expansion], axis=0)
 
-    def _expand(_, expansion_):
-        return jnp.logical_and(
-            lax.conv(expansion_.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL,
-                     window_strides=(1, 1), padding='same').astype(bool), areas)
+    def _last_expansion_no_change(last_two_expansions_):
+        return jnp.any(last_two_expansions_[0] != last_two_expansions_[1])
 
-    return lax.fori_loop(0, steps, _expand, seeds)
+    def _expand(last_two_expansions_):
+        last_two_expansions_ = last_two_expansions_.at[0].set(
+            last_two_expansions_[1])  # Copy the second state to the first state.
+        return last_two_expansions_.at[1].set(jnp.logical_and(
+            lax.conv(last_two_expansions_[1].astype('bfloat16'),
+                     constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
+                     padding='same').astype(bool), areas))
+
+    return lax.while_loop(_last_expansion_no_change, _expand, last_two_expansions)[1]
 
 
 def compute_free_groups(states, turns):
@@ -60,7 +68,7 @@ def compute_free_groups(states, turns):
         lax.conv(empty_spaces.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL, (1, 1),
                  padding='same'), pieces)
 
-    return jnp.squeeze(_paint_fill(immediate_free_pieces, pieces, steps=sum(states.shape[-2:])), 1)
+    return jnp.squeeze(_paint_fill(immediate_free_pieces, pieces), 1)
 
 
 def compute_areas(states):
@@ -87,11 +95,8 @@ def compute_areas(states):
     immediately_connected_to_white_pieces = jnp.logical_and(
         lax.conv(jnp.expand_dims(white_pieces, 1).astype('bfloat16'),
                  constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding="same"), empty_spaces)
-    paint_steps = sum(states.shape[-2:])
-    connected_to_black_pieces = _paint_fill(immediately_connected_to_black_pieces, empty_spaces,
-                                            steps=paint_steps)
-    connected_to_white_pieces = _paint_fill(immediately_connected_to_white_pieces, empty_spaces,
-                                            steps=paint_steps)
+    connected_to_black_pieces = _paint_fill(immediately_connected_to_black_pieces, empty_spaces)
+    connected_to_white_pieces = _paint_fill(immediately_connected_to_white_pieces, empty_spaces)
 
     connected_to_pieces = jnp.concatenate((connected_to_black_pieces, connected_to_white_pieces), 1)
     pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]

@@ -120,7 +120,16 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(gojax.get_ended(states), [False, True])
         np.testing.assert_array_equal(gojax.get_ended(next_states), [False, True])
 
+    def test_paint_fill(self):
+        x = jnp.array([[[[1, 1, 0, 1, 1], [0, 0, 0, 1, 1], [1, 1, 0, 0, 0], [0, 1, 1, 0, 0],
+                         [0, 0, 0, 0, 0]]]], dtype=bool)
 
+        seeds = jnp.array([[[[1, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 0]]]], dtype=bool)
+
+        expected_fill = jnp.array([[[[1, 1, 0, 0, 0], [0, 0, 0, 0, 0], [1, 1, 0, 0, 0],
+                                     [0, 1, 1, 0, 0], [0, 0, 0, 0, 0]]]], dtype=bool)
+        np.testing.assert_array_equal(gojax.paint_fill(seeds, x), expected_fill)
 
     def test_compute_free_groups_shape(self):
         state_str = """

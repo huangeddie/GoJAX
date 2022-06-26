@@ -20,7 +20,7 @@ def new_states(board_size, batch_size=1):
     return state
 
 
-def _paint_fill(seeds, areas):
+def paint_fill(seeds, areas):
     """
     Paint fills the seeds to expand as much area as they can expand to in all 4 cardinal directions.
 
@@ -65,7 +65,7 @@ def compute_free_groups(states, turns):
         lax.conv(empty_spaces.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL, (1, 1),
                  padding='same'), pieces)
 
-    return jnp.squeeze(_paint_fill(immediate_free_pieces, pieces), 1)
+    return jnp.squeeze(paint_fill(immediate_free_pieces, pieces), 1)
 
 
 def compute_areas(states):
@@ -92,8 +92,8 @@ def compute_areas(states):
     immediately_connected_to_white_pieces = jnp.logical_and(
         lax.conv(jnp.expand_dims(white_pieces, 1).astype('bfloat16'),
                  constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding="same"), empty_spaces)
-    connected_to_black_pieces = _paint_fill(immediately_connected_to_black_pieces, empty_spaces)
-    connected_to_white_pieces = _paint_fill(immediately_connected_to_white_pieces, empty_spaces)
+    connected_to_black_pieces = paint_fill(immediately_connected_to_black_pieces, empty_spaces)
+    connected_to_white_pieces = paint_fill(immediately_connected_to_white_pieces, empty_spaces)
 
     connected_to_pieces = jnp.concatenate((connected_to_black_pieces, connected_to_white_pieces), 1)
     pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]

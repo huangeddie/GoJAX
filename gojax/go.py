@@ -164,9 +164,8 @@ def compute_indicator_actions_are_invalid(states, indicator_actions):
     previously_killed_pieces = states[:, constants.KILLED_CHANNEL_INDEX]
     num_casualties = jnp.sum(previously_killed_pieces, axis=(1, 2))
     num_ghost_kills = jnp.sum(ghost_killed, axis=(1, 2))
-    komi = (num_ghost_kills == jnp.ones_like(num_ghost_kills)) & jnp.sum(
-        previously_killed_pieces & indicator_actions, axis=(1, 2)) & (
-                   num_casualties == jnp.ones_like(num_casualties))
+    komi = (num_ghost_kills == 1) & jnp.sum(previously_killed_pieces & indicator_actions,
+                                            axis=(1, 2)) & (num_casualties == 1)
     occupied = jnp.sum(
         jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]], axis=1,
                 dtype=bool) & indicator_actions, axis=(1, 2))

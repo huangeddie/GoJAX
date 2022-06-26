@@ -33,10 +33,12 @@ def _paint_fill(seeds, areas):
     :param areas: an N x 1 x B x B boolean array where the True entries are areas.
     :return: an N x 1 x B x B boolean array.
     """
-    second_expansion = jnp.logical_and(
-        lax.conv(seeds.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL,
-                 window_strides=(1, 1), padding='same').astype(bool), areas)
-    last_two_expansions = jnp.stack([seeds, second_expansion], axis=0)
+    float_areas = areas.astype('bfloat16')
+    float_seeds = seeds.astype('bfloat16')
+    second_expansion = lax.min(
+        lax.conv(float_seeds, constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
+                 padding='same') * float_areas, float_areas)
+    last_two_expansions = jnp.stack([float_seeds, second_expansion], axis=0)
 
     def _last_expansion_no_change(last_two_expansions_):
         return jnp.any(last_two_expansions_[0] != last_two_expansions_[1])
@@ -44,12 +46,11 @@ def _paint_fill(seeds, areas):
     def _expand(last_two_expansions_):
         last_two_expansions_ = last_two_expansions_.at[0].set(
             last_two_expansions_[1])  # Copy the second state to the first state.
-        return last_two_expansions_.at[1].set(jnp.logical_and(
-            lax.conv(last_two_expansions_[1].astype('bfloat16'),
-                     constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
-                     padding='same').astype(bool), areas))
+        return last_two_expansions_.at[1].set(lax.min(
+            lax.conv(last_two_expansions_[1], constants.CARDINALLY_CONNECTED_KERNEL,
+                     window_strides=(1, 1), padding='same') * float_areas, float_areas))
 
-    return lax.while_loop(_last_expansion_no_change, _expand, last_two_expansions)[1]
+    return lax.while_loop(_last_expansion_no_change, _expand, last_two_expansions)[1].astype(bool)
 
 
 def compute_free_groups(states, turns):

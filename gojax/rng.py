@@ -4,7 +4,7 @@ from jax import numpy as jnp, lax
 import gojax
 
 
-def sample_actions(states, logits, rng_key):
+def sample_all_actions(states, logits, rng_key):
     """
     Samples the valid actions from the logits with probability equal to softmax(
     raw_action_logits).
@@ -37,7 +37,7 @@ def sample_next_states(step, states, logits, rng_key):
     :return: a batch array of N Go games.
     """
     return gojax.next_states(states,
-                             sample_actions(states, logits, jax.random.fold_in(rng_key, step)))
+                             sample_all_actions(states, logits, jax.random.fold_in(rng_key, step)))
 
 
 def sample_random_state(board_size, batch_size, num_steps, logits, rng_key):

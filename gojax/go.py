@@ -36,20 +36,17 @@ def _paint_fill(seeds, areas):
     second_expansion = jnp.logical_and(
         lax.conv(seeds.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL,
                  window_strides=(1, 1), padding='same').astype(bool), areas)
-    last_two_expansions = jnp.stack([seeds, second_expansion], axis=0)
 
     def _last_expansion_no_change(last_two_expansions_):
         return jnp.any(last_two_expansions_[0] != last_two_expansions_[1])
 
     def _expand(last_two_expansions_):
-        last_two_expansions_ = last_two_expansions_.at[0].set(
-            last_two_expansions_[1])  # Copy the second state to the first state.
-        return last_two_expansions_.at[1].set(jnp.logical_and(
+        return last_two_expansions_[1], jnp.logical_and(
             lax.conv(last_two_expansions_[1].astype('bfloat16'),
                      constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
-                     padding='same').astype(bool), areas))
+                     padding='same').astype(bool), areas)
 
-    return lax.while_loop(_last_expansion_no_change, _expand, last_two_expansions)[1]
+    return lax.while_loop(_last_expansion_no_change, _expand, (seeds, second_expansion))[1]
 
 
 def compute_free_groups(states, turns):

@@ -42,10 +42,30 @@ class StateIndexTestCase(chex.TestCase):
         {'testcase_name': 'pass_and_move', 'states': gojax.new_states(board_size=2, batch_size=2),
          'actions': [None, (0, 0)],
          'expected_output': [[[False, False], [False, False]], [[True, False], [False, False]]]}, )
-    def test_action2d_indicies_to_indicator_(self, states, actions, expected_output):
+    def test_action2d_indices_to_indicator_(self, states, actions, expected_output):
         indicator_actions = gojax.action_2d_indices_to_indicator(actions, states)
         np.testing.assert_array_equal(indicator_actions, expected_output)
         chex.assert_type(indicator_actions, bool)
+
+    def test_action_1d_indices_to_indicator(self):
+        indicator_actions = gojax.action_1d_indices_to_indicator([5], gojax.new_states(board_size=3,
+                                                                                       batch_size=1))
+        np.testing.assert_array_equal(indicator_actions, [
+            [[False, False, False], [False, False, True], [False, False, False]]])
+
+    def test_action_1d_indices_to_indicator_pass_with_integer(self):
+        indicator_actions = gojax.action_1d_indices_to_indicator([10],
+                                                                 gojax.new_states(board_size=3,
+                                                                                  batch_size=1))
+        np.testing.assert_array_equal(indicator_actions, [
+            [[False, False, False], [False, False, False], [False, False, False]]])
+
+    def test_action_1d_indices_to_indicator_pass_with_none(self):
+        indicator_actions = gojax.action_1d_indices_to_indicator([None],
+                                                                 gojax.new_states(board_size=3,
+                                                                                  batch_size=1))
+        np.testing.assert_array_equal(indicator_actions, [
+            [[False, False, False], [False, False, False], [False, False, False]]])
 
     def test_get_turns_channel_index(self):
         states = gojax.new_states(2, batch_size=2)

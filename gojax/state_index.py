@@ -127,21 +127,40 @@ def at_location_per_turn(states, turns, row, col):
         states.shape[0], col)]
 
 
-def action_2d_indices_to_indicator(actions, states):
+def action_2d_indices_to_indicator(actions_2d, states):
     """
-    Converts an array of action indices into their sparse indicator array form.
+    Converts an array of action 2D indices into their sparse indicator array form.
 
-    :param actions: a list of N actions. Each element is either pass (None), or a tuple of
-    integers representing a row,
+    :param actions_2d: a list of N 2D action indices. Each element is either pass (None),
+    or a tuple of integers representing a row,
     column coordinate.
     :param states: a batch array of N Go games.
     :return: a (N x B x B) sparse array representing indicator actions for each state.
     """
     indicator_actions = jnp.zeros((states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
-    for i, action in enumerate(actions):
+    for i, action in enumerate(actions_2d):
         if action is None:
             continue
         indicator_actions = indicator_actions.at[i, action[0], action[1]].set(True)
+    return indicator_actions
+
+
+def action_1d_indices_to_indicator(actions_1d, states):
+    """
+    Converts an array of action 1D indices into their sparse indicator array form.
+
+    :param actions_1d: a list of N 1D action indices. Each element is either pass (None or
+    an integer equal to the number of actions),
+    an integer.
+    :param states: a batch array of N Go games.
+    :return: a (N x B x B) sparse array representing indicator actions for each state.
+    """
+    ncols = states.shape[3]
+    indicator_actions = jnp.zeros((states.shape[0], states.shape[2], ncols), dtype=bool)
+    for i, action_1d in enumerate(actions_1d):
+        if (action_1d is None) or (action_1d == get_action_size(states)):
+            continue
+        indicator_actions = indicator_actions.at[i, action_1d // ncols, action_1d % ncols].set(True)
     return indicator_actions
 
 

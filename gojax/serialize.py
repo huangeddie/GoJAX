@@ -6,6 +6,8 @@ from jax import numpy as jnp
 
 import gojax
 
+CAP_LETTERS = 'ABCDEFGHIJKLMNOPQRS'
+
 
 def _decode_single_state(encode_str, ended, komi, passed, turn):
     lines = encode_str.splitlines()
@@ -127,11 +129,10 @@ def get_pretty_string(state):
     :return: string representing the state.
     """
     board_str = ''
-    cap_letters = 'ABCDEFGHIJKLMNOPQRS'
     size = state.shape[1]
     board_str += '\t'
     for i in range(size):
-        board_str += f'{cap_letters[i]}'.ljust(2, ' ')
+        board_str += f'{CAP_LETTERS[i]}'.ljust(2, ' ')
     board_str += '\n'
     for i in range(size):
         board_str += f'{i}\t'

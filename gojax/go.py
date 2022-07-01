@@ -2,6 +2,7 @@
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jax import lax
 
 from gojax import constants
@@ -179,7 +180,7 @@ def compute_indicator_actions_are_invalid(states, indicator_actions):
     return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi), partial_next_states
 
 
-def compute_actions1d_are_invalid(states, action_1d):
+def compute_actions1d_are_invalid(states, actions_1d):
     """
     Computes whether the given actions are valid for each state.
 
@@ -195,18 +196,41 @@ def compute_actions1d_are_invalid(states, action_1d):
     • The move would kill exactly one of the opponent's pieces.
 
     :param states: a batch array of N Go games.
-    :param action_1d: 1D action index. For a given action `(row, col)` in a Go game with board
+    :param actions_1d: 1D action index. For a given action `(row, col)` in a Go game with board
     size `B`, the 1D form of
     the action would be `row x B + col`. The actions are in 1D form so that this function can be
     `jax.vmap`-ed.
     previous state.
     :return: a boolean array of length N indicating whether the moves are invalid.
     """
-    row = jnp.floor_divide(action_1d, states.shape[2])
-    col = jnp.remainder(action_1d, states.shape[3])
-    indicator_actions = jnp.zeros((len(states), states.shape[2], states.shape[3]), dtype=bool)
-    indicator_actions = indicator_actions.at[:, row, col].set(True)
-    return compute_indicator_actions_are_invalid(states, indicator_actions)[0]
+    rows = jnp.floor_divide(actions_1d, states.shape[2])
+    cols = jnp.remainder(actions_1d, states.shape[3])
+    n_indices = jnp.arange(len(states))
+    passed = (actions_1d == np.prod(states.shape[-2:]))
+    turns = state_index.get_turns(states)
+    opponents = ~turns
+    piece_added = states.at[n_indices, turns.astype('uint8'), rows, cols].set(
+        ~passed | states[n_indices, turns.astype('uint8'), rows, cols])
+    piece_added_and_opponents_removed = state_index.at_pieces_per_turn(piece_added, opponents).set(
+        compute_free_groups(piece_added, opponents))
+    ghost_killed = jnp.logical_xor(state_index.get_pieces_per_turn(piece_added, opponents),
+                                   state_index.get_pieces_per_turn(
+                                       piece_added_and_opponents_removed, opponents))
+    previously_killed_pieces = states[:, constants.KILLED_CHANNEL_INDEX]
+    num_casualties = jnp.sum(previously_killed_pieces, axis=(1, 2))
+    num_ghost_kills = jnp.sum(ghost_killed, axis=(1, 2))
+    komi = (num_ghost_kills == 1) & previously_killed_pieces[n_indices, rows, cols] & ~passed & (
+            num_casualties == 1)
+    occupied = \
+        jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]], axis=1,
+                dtype=bool)[n_indices, rows, cols] & ~passed
+    no_liberties = jnp.sum(
+        jnp.logical_xor(compute_free_groups(piece_added_and_opponents_removed, turns),
+                        state_index.get_pieces_per_turn(piece_added_and_opponents_removed, turns)),
+        axis=(1, 2), dtype=bool)
+    partial_next_states = piece_added_and_opponents_removed.at[:,
+                          constants.KILLED_CHANNEL_INDEX].set(ghost_killed)
+    return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi), partial_next_states
 
 
 def compute_invalid_actions(states):
@@ -241,6 +265,32 @@ def next_states(states, indicator_actions):
     previously_passed = jnp.alltrue(partial_next_states[:, constants.PASS_CHANNEL_INDEX],
                                     axis=(1, 2), keepdims=True)
     passed = jnp.alltrue(~indicator_actions, axis=(1, 2), keepdims=True)
+    partial_next_states = partial_next_states.at[:, constants.PASS_CHANNEL_INDEX].set(passed)
+    next_states_ = partial_next_states.at[:, constants.END_CHANNEL_INDEX].set(
+        previously_passed & passed)
+
+    # If the action is invalid or the game ended, set the move to pass, otherwise return what
+    # would be the next state.
+    return jnp.where(jnp.expand_dims(invalid_actions | state_index.get_ended(states), (1, 2, 3)),
+                     _change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True),
+                     next_states_)
+
+
+def next_states_v2(states, actions_1d):
+    """
+    Compute the next batch of states in Go.
+
+    :param states: a batch array of N Go games.
+    :param actions_1d: An array of N integers in range [0, B^2].
+    :return: an N x C x B x B boolean array.
+    """
+    invalid_actions, partial_next_states = compute_actions1d_are_invalid(states, actions_1d)
+
+    # Set turn, pass, and end channels.
+    partial_next_states = _change_turns(partial_next_states)
+    previously_passed = jnp.alltrue(partial_next_states[:, constants.PASS_CHANNEL_INDEX],
+                                    axis=(1, 2), keepdims=True)
+    passed = jnp.expand_dims(actions_1d == np.prod(states.shape[-2:]), (1, 2))
     partial_next_states = partial_next_states.at[:, constants.PASS_CHANNEL_INDEX].set(passed)
     next_states_ = partial_next_states.at[:, constants.END_CHANNEL_INDEX].set(
         previously_passed & passed)

@@ -42,6 +42,28 @@ class PieceRemovalTestCase(unittest.TestCase):
         self.assertTrue(delta_board[gojax.WHITE_CHANNEL_INDEX, 0, 0])
         self.assertFalse(next_state[0, gojax.WHITE_CHANNEL_INDEX, 0, 0])
 
+    def test_single_piece_v2(self):
+        state_str = """
+                    W _ _ _
+                    B _ _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = serialize.decode_states(state_str, gojax.BLACKS_TURN)
+
+        next_state = gojax.next_states_v2(state, actions_1d=jnp.array([1]))
+
+        # Check that the white piece is gone and the black piece is added
+        delta_board = jnp.logical_xor(next_state[0, [0, 1]], state[0, [0, 1]])
+        # Only have two changes
+        self.assertEqual(jnp.sum(delta_board), 2)
+        # The black piece is added
+        self.assertTrue(delta_board[gojax.BLACK_CHANNEL_INDEX, 0, 1])
+        self.assertTrue(next_state[0, gojax.BLACK_CHANNEL_INDEX, 0, 1])
+        # White piece removed
+        self.assertTrue(delta_board[gojax.WHITE_CHANNEL_INDEX, 0, 0])
+        self.assertFalse(next_state[0, gojax.WHITE_CHANNEL_INDEX, 0, 0])
+
     def test_two_connected_pieces(self):
         state_str = """
                     W W _ _
@@ -52,6 +74,20 @@ class PieceRemovalTestCase(unittest.TestCase):
         state = serialize.decode_states(state_str, gojax.BLACKS_TURN)
         next_state = gojax.next_states(state,
                                        state_index.action_2d_indices_to_indicator([(0, 2)], state))
+        self.assertTrue(jnp.alltrue(~next_state[0, gojax.WHITE_CHANNEL_INDEX]))
+        self.assertTrue(jnp.alltrue(next_state[0, gojax.BLACK_CHANNEL_INDEX] == jnp.array(
+            [[False, False, True, False], [True, True, False, False], [False, False, False, False],
+             [False, False, False, False]])), next_state[0, gojax.BLACK_CHANNEL_INDEX])
+
+    def test_two_connected_pieces_v2(self):
+        state_str = """
+                    W W _ _
+                    B B _ _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = serialize.decode_states(state_str, gojax.BLACKS_TURN)
+        next_state = gojax.next_states_v2(state, actions_1d=jnp.array([2]))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.WHITE_CHANNEL_INDEX]))
         self.assertTrue(jnp.alltrue(next_state[0, gojax.BLACK_CHANNEL_INDEX] == jnp.array(
             [[False, False, True, False], [True, True, False, False], [False, False, False, False],
@@ -72,6 +108,20 @@ class PieceRemovalTestCase(unittest.TestCase):
             [[False, True, False, True], [True, False, True, False], [False, False, False, False],
              [False, False, False, False]])))
 
+    def test_two_disjoint_pieces_v2(self):
+        state_str = """
+                    W _ W B
+                    B _ B _
+                    _ _ _ _
+                    _ _ _ _
+                    """
+        state = serialize.decode_states(state_str, gojax.BLACKS_TURN)
+        next_state = gojax.next_states_v2(state, actions_1d=jnp.array([1]))
+        self.assertTrue(jnp.alltrue(~next_state[0, gojax.WHITE_CHANNEL_INDEX]))
+        self.assertTrue(jnp.alltrue(next_state[0, gojax.BLACK_CHANNEL_INDEX] == jnp.array(
+            [[False, True, False, True], [True, False, True, False], [False, False, False, False],
+             [False, False, False, False]])))
+
     def test_donut(self):
         state_str = """
                     B B B W
@@ -82,6 +132,20 @@ class PieceRemovalTestCase(unittest.TestCase):
         state = serialize.decode_states(state_str, gojax.WHITES_TURN)
         next_state = gojax.next_states(state,
                                        state_index.action_2d_indices_to_indicator([(1, 1)], state))
+        self.assertTrue(jnp.alltrue(~next_state[0, gojax.BLACK_CHANNEL_INDEX]))
+        self.assertTrue(jnp.alltrue(next_state[0, gojax.WHITE_CHANNEL_INDEX] == jnp.array(
+            [[False, False, False, True], [False, True, False, True], [False, False, False, True],
+             [True, True, True, False]])))
+
+    def test_donut_v2(self):
+        state_str = """
+                    B B B W
+                    B _ B W
+                    B B B W
+                    W W W _
+                    """
+        state = serialize.decode_states(state_str, gojax.WHITES_TURN)
+        next_state = gojax.next_states_v2(state, actions_1d=jnp.array([5]))
         self.assertTrue(jnp.alltrue(~next_state[0, gojax.BLACK_CHANNEL_INDEX]))
         self.assertTrue(jnp.alltrue(next_state[0, gojax.WHITE_CHANNEL_INDEX] == jnp.array(
             [[False, False, False, True], [False, True, False, True], [False, False, False, True],

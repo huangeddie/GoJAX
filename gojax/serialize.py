@@ -168,3 +168,12 @@ def get_pretty_string(state):
     board_str += f"\tTurn: {'BLACK' if turn == 0 else 'WHITE'}, Game State: {game_state}\n"
     board_str += f'\tBlack Area: {areas[0, 0]}, White Area: {areas[0, 1]}\n'
     return board_str
+
+
+def print_pretty_state(state):
+    """
+    Prints a human-friendly string of the given state.
+
+    :param state: (1 x) C x B x B boolean array.
+    """
+    print(get_pretty_string(state))

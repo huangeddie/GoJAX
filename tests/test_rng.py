@@ -22,7 +22,7 @@ class RNGTestCase(chex.TestCase):
         chex.assert_type(sampled_actions, bool)
 
     def test_sample_non_occupied_actions_from_high_entropy_logits(self):
-        sampled_actions = rng.sample_non_occupied_actions(gojax.decode_states("""
+        sampled_actions = rng.sample_non_occupied_indicator_actions(gojax.decode_states("""
                                                                     B B B
                                                                     B B B
                                                                     B B _
@@ -32,7 +32,7 @@ class RNGTestCase(chex.TestCase):
                                                                     B B B
                                                                     """), logits=jnp.array(
             [[10, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 10, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=float),
-                                                          rng_key=jax.random.PRNGKey(1))
+                                                                    rng_key=jax.random.PRNGKey(1))
         np.testing.assert_array_equal(sampled_actions, [[[0, 0, 0], [0, 0, 0], [0, 0, 1]],
                                                         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]])
         chex.assert_type(sampled_actions, bool)

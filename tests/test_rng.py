@@ -52,6 +52,16 @@ class RNGTestCase(chex.TestCase):
                                                                 _ W B
                                                                 """))
 
+    def test_sample_random_state_v2(self):
+        state = rng.sample_random_state_v2(board_size=3, batch_size=1, num_steps=4,
+                                           logits=jnp.zeros((1, 10)),
+                                           rng_key=jax.random.PRNGKey(42))
+        np.testing.assert_array_equal(state, serialize.decode_states("""
+                                                                W B _
+                                                                _ _ _
+                                                                _ W B
+                                                                """))
+
 
 if __name__ == '__main__':
     unittest.main()

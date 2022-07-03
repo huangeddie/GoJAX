@@ -125,9 +125,11 @@ def get_pretty_string(state):
     """
     Creates a human-friendly string of the given state.
 
-    :param state: C x B x B boolean array .
+    :param state: (1 x) C x B x B boolean array.
     :return: string representing the state.
     """
+    if jnp.ndim(state) == 4 and state.shape[0] == 1:
+        state = jnp.squeeze(state, axis=0)
     board_str = ''
     size = state.shape[1]
     board_str += '\t'

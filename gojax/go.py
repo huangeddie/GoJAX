@@ -34,23 +34,26 @@ def paint_fill(seeds, areas):
     :param areas: an N x 1 x B x B boolean array where the True entries are areas.
     :return: an N x 1 x B x B boolean array.
     """
-    second_expansion = jnp.logical_and(
-        lax.conv(seeds.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL,
-                 window_strides=(1, 1), padding='same'), areas)
+    float_seeds = seeds.astype('bfloat16')
+    float_areas = areas.astype('bfloat16')
+    second_expansion = lax.min(
+        lax.conv(float_seeds, constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
+                 padding='same'), float_areas)
 
     def _last_expansion_no_change(last_two_expansions_):
         return jnp.any(last_two_expansions_[0] != last_two_expansions_[1])
 
-    def _expand_twice(last_two_expansions_):
-        expanded = jnp.logical_and(lax.conv(last_two_expansions_[1].astype('bfloat16'),
-                                            constants.CARDINALLY_CONNECTED_KERNEL,
-                                            window_strides=(1, 1), padding='same'), areas)
-        expanded = jnp.logical_and(
-            lax.conv(expanded.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL,
-                     window_strides=(1, 1), padding='same'), areas)
+    def _expand_some(last_two_expansions_):
+        expanded = lax.min(lax.conv(last_two_expansions_[1].astype('bfloat16'),
+                                    constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
+                                    padding='same'), float_areas)
+        expanded = lax.min(
+            lax.conv(expanded, constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
+                     padding='same'), float_areas)
         return last_two_expansions_[1], expanded
 
-    return lax.while_loop(_last_expansion_no_change, _expand_twice, (seeds, second_expansion))[1]
+    return lax.while_loop(_last_expansion_no_change, _expand_some, (float_seeds, second_expansion))[
+        1].astype('bool')
 
 
 def compute_free_groups(states, turns):

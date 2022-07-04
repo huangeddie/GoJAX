@@ -261,7 +261,7 @@ def next_states(states, indicator_actions):
                                                                                  indicator_actions)
 
     # Set turn, pass, and end channels.
-    partial_next_states = _change_turns(partial_next_states)
+    partial_next_states = change_turns(partial_next_states)
     previously_passed = jnp.alltrue(partial_next_states[:, constants.PASS_CHANNEL_INDEX],
                                     axis=(1, 2), keepdims=True)
     passed = jnp.alltrue(~indicator_actions, axis=(1, 2), keepdims=True)
@@ -272,7 +272,7 @@ def next_states(states, indicator_actions):
     # If the action is invalid or the game ended, set the move to pass, otherwise return what
     # would be the next state.
     return jnp.where(jnp.expand_dims(invalid_actions | state_index.get_ended(states), (1, 2, 3)),
-                     _change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True),
+                     change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True),
                      next_states_)
 
 
@@ -287,7 +287,7 @@ def next_states_v2(states, actions_1d):
     invalid_actions, partial_next_states = compute_actions1d_are_invalid(states, actions_1d)
 
     # Set turn, pass, and end channels.
-    partial_next_states = _change_turns(partial_next_states)
+    partial_next_states = change_turns(partial_next_states)
     previously_passed = jnp.alltrue(partial_next_states[:, constants.PASS_CHANNEL_INDEX],
                                     axis=(1, 2), keepdims=True)
     passed = jnp.expand_dims(actions_1d == np.prod(states.shape[-2:]), (1, 2))
@@ -298,11 +298,11 @@ def next_states_v2(states, actions_1d):
     # If the action is invalid or the game ended, set the move to pass, otherwise return what
     # would be the next state.
     return jnp.where(jnp.expand_dims(invalid_actions | state_index.get_ended(states), (1, 2, 3)),
-                     _change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True),
+                     change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True),
                      next_states_)
 
 
-def _change_turns(states):
+def change_turns(states):
     """
     Changes the turn for each state in states.
 
@@ -322,4 +322,4 @@ def swap_perspectives(states):
     swapped_pieces = states.at[:,
                      [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]].set(
         states[:, [constants.WHITE_CHANNEL_INDEX, constants.BLACK_CHANNEL_INDEX]])
-    return _change_turns(swapped_pieces)
+    return change_turns(swapped_pieces)

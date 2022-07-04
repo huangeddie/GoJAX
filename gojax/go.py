@@ -44,9 +44,8 @@ def paint_fill(seeds, areas):
         return jnp.any(last_two_expansions_[0] != last_two_expansions_[1])
 
     def _expand_some(last_two_expansions_):
-        expanded = lax.min(lax.conv(last_two_expansions_[1].astype('bfloat16'),
-                                    constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
-                                    padding='same'), float_areas)
+        expanded = lax.min(lax.conv(last_two_expansions_[1], constants.CARDINALLY_CONNECTED_KERNEL,
+                                    window_strides=(1, 1), padding='same'), float_areas)
         expanded = lax.min(
             lax.conv(expanded, constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
                      padding='same'), float_areas)

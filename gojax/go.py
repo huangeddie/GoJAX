@@ -30,9 +30,9 @@ def paint_fill(seeds, areas):
     Note that the seeds must intersect a location of an area in order to fill it. It cannot be
     adjacent to an area.
 
-    :param seeds: an N x 1 x B x B boolean array where the True entries are the seeds.
-    :param areas: an N x 1 x B x B boolean array where the True entries are areas.
-    :return: an N x 1 x B x B boolean array.
+    :param seeds: an N x 1 x B x B float array where the True entries are the seeds.
+    :param areas: an N x 1 x B x B float array where the True entries are areas.
+    :return: an N x 1 x B x B float array.
     """
     float_seeds = seeds.astype('bfloat16')
     float_areas = areas.astype('bfloat16')
@@ -55,7 +55,7 @@ def paint_fill(seeds, areas):
         return last_two_expansions_[1], expanded
 
     return lax.while_loop(_last_expansion_no_change, _expand_some, (float_seeds, second_expansion))[
-        1].astype('bool')
+        1]
 
 
 def compute_free_groups(states, turns):
@@ -68,13 +68,15 @@ def compute_free_groups(states, turns):
     :param turns: a boolean array of length N.
     :return: an N x B x B boolean array.
     """
-    pieces = jnp.expand_dims(state_index.get_pieces_per_turn(states, turns), 1)
-    empty_spaces = state_index.get_empty_spaces(states, keepdims=True)  # N x 1 x B x B array.
-    immediate_free_pieces = jnp.logical_and(
-        lax.conv(empty_spaces.astype('bfloat16'), constants.CARDINALLY_CONNECTED_KERNEL, (1, 1),
-                 padding='same'), pieces)
+    float_pieces = jnp.expand_dims(state_index.get_pieces_per_turn(states, turns), 1).astype(
+        'bfloat16')
+    float_empty_spaces = state_index.get_empty_spaces(states, keepdims=True).astype(
+        'bfloat16')  # N x 1 x B x B array.
+    immediate_free_pieces = lax.min(
+        lax.conv(float_empty_spaces, constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding='same'),
+        float_pieces)
 
-    return jnp.squeeze(paint_fill(immediate_free_pieces, pieces), 1)
+    return jnp.squeeze(paint_fill(immediate_free_pieces, float_pieces), 1).astype(bool)
 
 
 def compute_areas(states):
@@ -91,20 +93,21 @@ def compute_areas(states):
     represent the black and
     white areas respectively.
     """
-    black_pieces = states[:, constants.BLACK_CHANNEL_INDEX]
-    white_pieces = states[:, constants.WHITE_CHANNEL_INDEX]
-    empty_spaces = state_index.get_empty_spaces(states, keepdims=True)
+    black_pieces = states[:, constants.BLACK_CHANNEL_INDEX].astype('bfloat16')
+    white_pieces = states[:, constants.WHITE_CHANNEL_INDEX].astype('bfloat16')
+    empty_spaces = state_index.get_empty_spaces(states, keepdims=True).astype('bfloat16')
 
-    immediately_connected_to_black_pieces = jnp.logical_and(
-        lax.conv(jnp.expand_dims(black_pieces, 1).astype('bfloat16'),
-                 constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding="same"), empty_spaces)
-    immediately_connected_to_white_pieces = jnp.logical_and(
-        lax.conv(jnp.expand_dims(white_pieces, 1).astype('bfloat16'),
-                 constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding="same"), empty_spaces)
+    immediately_connected_to_black_pieces = lax.min(
+        lax.conv(jnp.expand_dims(black_pieces, 1), constants.CARDINALLY_CONNECTED_KERNEL, (1, 1),
+                 padding="same"), empty_spaces)
+    immediately_connected_to_white_pieces = lax.min(
+        lax.conv(jnp.expand_dims(white_pieces, 1), constants.CARDINALLY_CONNECTED_KERNEL, (1, 1),
+                 padding="same"), empty_spaces)
     connected_to_black_pieces = paint_fill(immediately_connected_to_black_pieces, empty_spaces)
     connected_to_white_pieces = paint_fill(immediately_connected_to_white_pieces, empty_spaces)
 
-    connected_to_pieces = jnp.concatenate((connected_to_black_pieces, connected_to_white_pieces), 1)
+    connected_to_pieces = jnp.concatenate((connected_to_black_pieces, connected_to_white_pieces),
+                                          1).astype(bool)
     pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]
     return jnp.logical_or(jnp.logical_and(connected_to_pieces, ~connected_to_pieces[:, ::-1]),
                           pieces)

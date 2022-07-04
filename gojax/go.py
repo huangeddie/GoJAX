@@ -241,7 +241,7 @@ def compute_invalid_actions(states):
     :return: an N x B x B indicator array of invalid moves.
     """
 
-    invalid_moves = jax.vmap(compute_actions1d_are_invalid, (None, 0), 1)(states, jnp.arange(
+    invalid_moves, _ = jax.vmap(compute_actions1d_are_invalid, (None, 0), 1)(states, jnp.arange(
         states.shape[2] * states.shape[3]))
     return jnp.reshape(invalid_moves, (states.shape[0], states.shape[2], states.shape[3]))
 

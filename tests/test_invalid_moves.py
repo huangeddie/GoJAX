@@ -20,7 +20,7 @@ import state_index
 class InvalidMovesTestCase(unittest.TestCase):
     """Tests Go invalid move logic."""
 
-    def test_get_action_is_invalid_false(self):
+    def test_compute_actions1d_are_invalid_false(self):
         state_str = """
                     _ _ _ _
                     _ _ _ _
@@ -29,9 +29,10 @@ class InvalidMovesTestCase(unittest.TestCase):
                     """
         state = serialize.decode_states(state_str, gojax.BLACKS_TURN)
         action1d = 0
-        self.assertFalse(gojax.compute_actions1d_are_invalid(state, action1d))
+        np.testing.assert_array_equal(gojax.compute_actions1d_are_invalid(state, action1d)[0],
+                                      [False])
 
-    def test_get_action_is_invalid_komi(self):
+    def test_compute_actions1d_are_invalid_komi(self):
         state_str = """
                     _ B W _
                     B W _ W
@@ -40,8 +41,8 @@ class InvalidMovesTestCase(unittest.TestCase):
                     KOMI=1,2
                     """
         state = serialize.decode_states(state_str, gojax.BLACKS_TURN)
-        action1d = 6
-        self.assertTrue(gojax.compute_actions1d_are_invalid(state, action1d))
+        np.testing.assert_array_equal(gojax.compute_actions1d_are_invalid(state, actions_1d=6)[0],
+                                      [True])
 
     def test_komi(self):
         state_str = """

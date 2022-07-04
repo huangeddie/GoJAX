@@ -1,7 +1,7 @@
 """Tests general Go functions."""
 
 # pylint: disable=missing-function-docstring,too-many-public-methods,no-self-use,duplicate-code
-
+import textwrap
 import unittest
 
 import chex
@@ -250,9 +250,17 @@ class GoTestCase(chex.TestCase):
             _ _ _ _
             """
         state = serialize.decode_states(state_str)
-        with open('tests/expected_pretty_string.txt', 'r', encoding='utf8') as file:
-            expected_str = file.read()
-        self.assertEqual(expected_str, serialize.get_pretty_string(state[0]))
+        expected_str = textwrap.dedent("""\
+        \tA B C D 
+        0	○═╤═╤═╗
+        1	╟─●─┼─╢
+        2	╟─┼─┼─╢
+        3	╚═╧═╧═╝
+        \tTurn: BLACK, Game State: ONGOING
+        \tBlack Area: 1, White Area: 1
+        """)
+
+        self.assertEqual(serialize.get_pretty_string(state[0]), expected_str)
 
     def test_compute_areas_empty(self):
         state = serialize.decode_states("""

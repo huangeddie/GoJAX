@@ -217,8 +217,8 @@ def compute_actions1d_are_invalid(states, actions_1d):
     passed = (actions_1d == np.prod(states.shape[-2:]))
     turns = state_index.get_turns(states)
     opponents = ~turns
-    piece_added = states.at[n_indices, turns.astype('uint8'), rows, cols].set(
-        ~passed | states[n_indices, turns.astype('uint8'), rows, cols])
+    turn_idcs = turns.astype('uint8')
+    piece_added = states.at[n_indices, turn_idcs, rows, cols].set(~passed)
     piece_added_and_opponents_removed = state_index.at_pieces_per_turn(piece_added, opponents).set(
         compute_free_groups(piece_added, opponents))
     ghost_killed = jnp.logical_xor(state_index.get_pieces_per_turn(piece_added, opponents),

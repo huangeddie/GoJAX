@@ -46,9 +46,6 @@ def paint_fill(seeds, areas):
     def _expand_some(last_two_expansions_):
         expanded = lax.min(lax.conv(last_two_expansions_[1], constants.CARDINALLY_CONNECTED_KERNEL,
                                     window_strides=(1, 1), padding='same'), float_areas)
-        expanded = lax.min(
-            lax.conv(expanded, constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
-                     padding='same'), float_areas)
         return last_two_expansions_[1], expanded
 
     return lax.while_loop(_last_expansion_no_change, _expand_some, (float_seeds, second_expansion))[

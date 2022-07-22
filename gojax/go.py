@@ -313,6 +313,27 @@ def next_states_v2(states, actions_1d):
                      next_states_)
 
 
+def get_children(states: jnp.ndarray):
+    """
+    Compute all next states for every state.
+
+    Invalid moves equate to passes.
+
+    :param states: an N x C x B x B boolean array.
+    :return: an N x A x C x B x B boolean array.
+    """
+    batch_size = len(states)
+    action_size = state_index.get_action_size(states)
+    all_actions_1d = jnp.arange(action_size)
+    all_actions_1d = jnp.repeat(jnp.expand_dims(all_actions_1d, axis=0), batch_size, axis=0)
+    states = jnp.repeat(jnp.expand_dims(states, axis=1), action_size, axis=1)
+    state_shape = states.shape[-3:]
+    flattened_states = jnp.reshape(states, (batch_size * action_size, *state_shape))
+    flattened_all_actions_1d = jnp.reshape(all_actions_1d, batch_size * action_size)
+    flattened_children = next_states_v2(flattened_states, flattened_all_actions_1d)
+    return jnp.reshape(flattened_children, (batch_size, action_size, *state_shape))
+
+
 def change_turns(states):
     """
     Changes the turn for each state in states.

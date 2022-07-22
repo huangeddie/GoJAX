@@ -516,65 +516,111 @@ class GoTestCase(chex.TestCase):
 
         np.testing.assert_array_equal(children, expected_children)
 
-    def test_get_all_children(self):
+    def test_get_children(self):
         action_size = 10
         board_size = 3
-        states = gojax.new_states(board_size, batch_size=action_size)
-        indicator_actions = jnp.reshape(
-            nn.one_hot(jnp.arange(action_size), num_classes=board_size ** 2, dtype=bool),
-            (action_size, board_size, board_size))
-        children = gojax.next_states(states, indicator_actions)
-        expected_children = jnp.concatenate((serialize.decode_states("""
+        batch_size = 1
+        states = gojax.new_states(board_size, batch_size)
+        children = gojax.get_children(states)
+        chex.assert_shape(children,
+                          (batch_size, action_size, gojax.NUM_CHANNELS, board_size, board_size))
+        expected_children = serialize.decode_states("""
                                                   B _ _
                                                   _ _ _
                                                   _ _ _
-                                                  """, turn=gojax.WHITES_TURN),
-                                             serialize.decode_states("""
+                                                  
                                                   _ B _
                                                   _ _ _
                                                   _ _ _
-                                                  """, turn=gojax.WHITES_TURN),
-                                             serialize.decode_states("""
+                                                  
                                                   _ _ B
                                                   _ _ _
                                                   _ _ _
-                                                  """, turn=gojax.WHITES_TURN),
-                                             serialize.decode_states("""
+                                                  
                                                   _ _ _
                                                   B _ _
                                                   _ _ _
-                                                  """, turn=gojax.WHITES_TURN),
-                                             serialize.decode_states("""
+                                                  
                                                   _ _ _
                                                   _ B _
                                                   _ _ _
-                                                  """, turn=gojax.WHITES_TURN),
-                                             serialize.decode_states("""
+                                                  
                                                   _ _ _
                                                   _ _ B
                                                   _ _ _
-                                                  """, turn=gojax.WHITES_TURN),
-                                             serialize.decode_states("""
+                                                  
                                                   _ _ _
                                                   _ _ _
                                                   B _ _
-                                                  """, turn=gojax.WHITES_TURN),
-                                             serialize.decode_states("""
+                                                  
                                                   _ _ _
                                                   _ _ _
                                                   _ B _
-                                                  """, turn=gojax.WHITES_TURN),
-                                             serialize.decode_states("""
+                                                  
                                                   _ _ _
                                                   _ _ _
                                                   _ _ B
-                                                  """, turn=gojax.WHITES_TURN),
-                                             serialize.decode_states("""
+                                                  
                                                   _ _ _
                                                   _ _ _
                                                   _ _ _
-                                                  """, turn=gojax.WHITES_TURN, passed=True),))
+                                                  PASS=T
+                                                    """, turn=gojax.WHITES_TURN)
 
+        np.testing.assert_array_equal(children, jnp.expand_dims(expected_children, 0))
+
+    def test_get_children_batches(self):
+        """Test get_children works with two states."""
+        action_size = 10
+        board_size = 3
+        batch_size = 2
+        states = gojax.new_states(board_size, batch_size)
+        children = gojax.get_children(states)
+        chex.assert_shape(children,
+                          (batch_size, action_size, gojax.NUM_CHANNELS, board_size, board_size))
+        expected_children = serialize.decode_states("""
+                                                  B _ _
+                                                  _ _ _
+                                                  _ _ _
+
+                                                  _ B _
+                                                  _ _ _
+                                                  _ _ _
+
+                                                  _ _ B
+                                                  _ _ _
+                                                  _ _ _
+
+                                                  _ _ _
+                                                  B _ _
+                                                  _ _ _
+
+                                                  _ _ _
+                                                  _ B _
+                                                  _ _ _
+
+                                                  _ _ _
+                                                  _ _ B
+                                                  _ _ _
+
+                                                  _ _ _
+                                                  _ _ _
+                                                  B _ _
+
+                                                  _ _ _
+                                                  _ _ _
+                                                  _ B _
+
+                                                  _ _ _
+                                                  _ _ _
+                                                  _ _ B
+
+                                                  _ _ _
+                                                  _ _ _
+                                                  _ _ _
+                                                  PASS=T
+                                                    """, turn=gojax.WHITES_TURN)
+        expected_children = jnp.repeat(jnp.expand_dims(expected_children, 0), batch_size, axis=0)
         np.testing.assert_array_equal(children, expected_children)
 
 

@@ -19,7 +19,7 @@ class StateIndexTestCase(chex.TestCase):
                                   'expected_indices': (4, 0)}, )
     def test_action_indicators_to_indices_(self, indicator_actions, expected_indices):
         np.testing.assert_array_equal(
-            gojax.action_indicators_to_indices(jnp.array(indicator_actions)), expected_indices)
+            gojax.action_indicators_to_1d_indices(jnp.array(indicator_actions)), expected_indices)
 
     @parameterized.named_parameters(
         {'testcase_name': 'small', 'board_size': 3, 'batch_size': 1, 'expected_action_size': 10},
@@ -48,22 +48,16 @@ class StateIndexTestCase(chex.TestCase):
         chex.assert_type(indicator_actions, bool)
 
     def test_action_1d_indices_to_indicator(self):
-        indicator_actions = gojax.action_1d_indices_to_indicator([5], gojax.new_states(board_size=3,
-                                                                                       batch_size=1))
+        board_size = 3
+        indicator_actions = gojax.action_1d_indices_to_indicator(jnp.array([5]), nrows=board_size,
+                                                                 ncols=board_size)
         np.testing.assert_array_equal(indicator_actions, [
             [[False, False, False], [False, False, True], [False, False, False]]])
 
     def test_action_1d_indices_to_indicator_pass_with_integer(self):
-        indicator_actions = gojax.action_1d_indices_to_indicator([10],
-                                                                 gojax.new_states(board_size=3,
-                                                                                  batch_size=1))
-        np.testing.assert_array_equal(indicator_actions, [
-            [[False, False, False], [False, False, False], [False, False, False]]])
-
-    def test_action_1d_indices_to_indicator_pass_with_none(self):
-        indicator_actions = gojax.action_1d_indices_to_indicator([None],
-                                                                 gojax.new_states(board_size=3,
-                                                                                  batch_size=1))
+        board_size = 3
+        indicator_actions = gojax.action_1d_indices_to_indicator(jnp.array([9]), nrows=board_size,
+                                                                 ncols=board_size)
         np.testing.assert_array_equal(indicator_actions, [
             [[False, False, False], [False, False, False], [False, False, False]]])
 

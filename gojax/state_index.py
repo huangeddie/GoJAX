@@ -145,26 +145,24 @@ def action_2d_indices_to_indicator(actions_2d, states):
     return indicator_actions
 
 
-def action_1d_indices_to_indicator(actions_1d, states):
+def action_1d_indices_to_indicator(actions_1d: jnp.ndarray, nrows: int, ncols: int):
     """
     Converts an array of action 1D indices into their sparse indicator array form.
 
     :param actions_1d: a list of N 1D action indices. Each element is either pass (None or
     an integer equal to the number of actions),
     an integer.
-    :param states: a batch array of N Go games.
+    :param nrows: number of rows
+    :param ncols: number of columns
     :return: a (N x B x B) sparse array representing indicator actions for each state.
     """
-    ncols = states.shape[3]
-    indicator_actions = jnp.zeros((states.shape[0], states.shape[2], ncols), dtype=bool)
-    for i, action_1d in enumerate(actions_1d):
-        if (action_1d is None) or (action_1d == get_action_size(states)):
-            continue
-        indicator_actions = indicator_actions.at[i, action_1d // ncols, action_1d % ncols].set(True)
-    return indicator_actions
+    batch_size = len(actions_1d)
+    indicator_actions = jnp.zeros((batch_size, nrows * ncols + 1), dtype=bool)
+    indicator_actions = indicator_actions.at[jnp.arange(batch_size), actions_1d].set(True)
+    return jnp.reshape(indicator_actions[:, :-1], (batch_size, nrows, ncols))
 
 
-def action_indicators_to_indices(indicator_actions):
+def action_indicators_to_1d_indices(indicator_actions):
     """
     Converts an array of indicator actions to their corresponding action indices.
 

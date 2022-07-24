@@ -1,5 +1,7 @@
 """Main Go game functions."""
 
+from typing import Tuple
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -9,7 +11,7 @@ from gojax import constants
 from gojax import state_index
 
 
-def new_states(board_size, batch_size=1):
+def new_states(board_size: int, batch_size: int = 1) -> jnp.ndarray:
     """
     Returns a batch array of new Go games.
 
@@ -21,7 +23,7 @@ def new_states(board_size, batch_size=1):
     return state
 
 
-def paint_fill(seeds, areas):
+def paint_fill(seeds: jnp.ndarray, areas: jnp.ndarray) -> jnp.ndarray:
     """
     Paint fills the seeds to expand as much area as they can expand to in all 4 cardinal directions.
 
@@ -58,7 +60,7 @@ def paint_fill(seeds, areas):
         1]
 
 
-def compute_free_groups(states, turns):
+def compute_free_groups(states: jnp.ndarray, turns: jnp.ndarray) -> jnp.ndarray:
     """
     Computes the free groups for each turn in the state of states.
 
@@ -79,7 +81,7 @@ def compute_free_groups(states, turns):
     return jnp.squeeze(paint_fill(immediate_free_pieces, float_pieces), 1).astype(bool)
 
 
-def compute_areas(states):
+def compute_areas(states: jnp.ndarray) -> jnp.ndarray:
     """
     Compute the black and white areas of the states.
 
@@ -113,7 +115,7 @@ def compute_areas(states):
                           pieces)
 
 
-def compute_area_sizes(states):
+def compute_area_sizes(states: jnp.ndarray) -> jnp.ndarray:
     """
     Compute the size of the black and white areas (i.e. the number of pieces and empty spaces
     controlled by each player).
@@ -124,7 +126,7 @@ def compute_area_sizes(states):
     return jnp.sum(compute_areas(states), axis=(2, 3))
 
 
-def compute_winning(states):
+def compute_winning(states: jnp.ndarray) -> jnp.ndarray:
     """
     Computes which player has the higher amount of area.
 
@@ -139,7 +141,8 @@ def compute_winning(states):
                      -jnp.squeeze(jnp.diff(jnp.sum(compute_areas(states), axis=(2, 3))), axis=1), 1)
 
 
-def compute_indicator_actions_are_invalid(states, indicator_actions):
+def compute_indicator_actions_are_invalid(states: jnp.ndarray, indicator_actions: jnp.ndarray) -> \
+        Tuple[jnp.ndarray, jnp.ndarray]:
     """
     Computes whether the given actions are valid for each state.
 
@@ -191,7 +194,7 @@ def compute_indicator_actions_are_invalid(states, indicator_actions):
     return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi), partial_next_states
 
 
-def compute_actions1d_are_invalid(states, actions_1d):
+def compute_actions1d_are_invalid(states: jnp.ndarray, actions_1d: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
     """
     Computes whether the given actions are valid for each state.
 
@@ -244,7 +247,7 @@ def compute_actions1d_are_invalid(states, actions_1d):
     return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi), partial_next_states
 
 
-def compute_invalid_actions(states):
+def compute_invalid_actions(states: jnp.ndarray) -> jnp.ndarray:
     """
     Computes the invalid moves for the turns of each state.
 
@@ -257,7 +260,7 @@ def compute_invalid_actions(states):
     return jnp.reshape(invalid_moves, (states.shape[0], states.shape[2], states.shape[3]))
 
 
-def next_states(states, indicator_actions):
+def next_states(states: jnp.ndarray, indicator_actions: jnp.ndarray) -> jnp.ndarray:
     """
     Compute the next batch of states in Go.
 
@@ -287,7 +290,7 @@ def next_states(states, indicator_actions):
                      next_states_)
 
 
-def next_states_v2(states, actions_1d):
+def next_states_v2(states: jnp.ndarray, actions_1d: jnp.ndarray) -> jnp.ndarray:
     """
     Compute the next batch of states in Go.
 
@@ -313,7 +316,7 @@ def next_states_v2(states, actions_1d):
                      next_states_)
 
 
-def get_children(states: jnp.ndarray):
+def get_children(states: jnp.ndarray) -> jnp.ndarray:
     """
     Compute all next states for every state.
 
@@ -334,7 +337,7 @@ def get_children(states: jnp.ndarray):
     return jnp.reshape(flattened_children, (batch_size, action_size, *state_shape))
 
 
-def change_turns(states):
+def change_turns(states: jnp.ndarray) -> jnp.ndarray:
     """
     Changes the turn for each state in states.
 
@@ -344,7 +347,7 @@ def change_turns(states):
     return states.at[:, constants.TURN_CHANNEL_INDEX].set(~states[:, constants.TURN_CHANNEL_INDEX])
 
 
-def swap_perspectives(states):
+def swap_perspectives(states: jnp.ndarray) -> jnp.ndarray:
     """
     Returns the same states but with the turns and pieces swapped.
 

@@ -1,5 +1,7 @@
 """Low-level informational functions about Go states."""
 
+from typing import Union
+
 from jax import numpy as jnp
 
 from gojax import constants
@@ -127,7 +129,7 @@ def at_location_per_turn(states, turns, row, col):
         states.shape[0], col)]
 
 
-def action_2d_to_indicator(actions_2d: jnp.ndarray, states: jnp.ndarray):
+def action_2d_to_indicator(actions_2d: Union[jnp.ndarray, list], states: jnp.ndarray):
     """
     Converts an array of action 2D indices into their sparse indicator array form.
 

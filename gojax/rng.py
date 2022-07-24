@@ -78,7 +78,7 @@ def sample_next_states(step, states, logits, rng_key,
     sample_non_occupied_indicator_actions.
     :return: a batch array of N Go games.
     """
-    return gojax.next_states(states, sampling_fn(states, logits, jax.random.fold_in(rng_key, step)))
+    return gojax.next_states_legacy(states, sampling_fn(states, logits, jax.random.fold_in(rng_key, step)))
 
 
 def sample_next_states_v2(step, states, logits, rng_key,
@@ -95,8 +95,8 @@ def sample_next_states_v2(step, states, logits, rng_key,
     sample_non_occupied_indicator_actions.
     :return: a batch array of N Go games.
     """
-    return gojax.next_states_v2(states, actions1d_sampling_fn(states, logits,
-                                                              jax.random.fold_in(rng_key, step)))
+    return gojax.next_states(states, actions1d_sampling_fn(states, logits,
+                                                           jax.random.fold_in(rng_key, step)))
 
 
 def sample_random_state(board_size, batch_size, num_steps, logits, rng_key,

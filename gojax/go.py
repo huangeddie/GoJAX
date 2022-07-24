@@ -260,7 +260,7 @@ def compute_invalid_actions(states: jnp.ndarray) -> jnp.ndarray:
     return jnp.reshape(invalid_moves, (states.shape[0], states.shape[2], states.shape[3]))
 
 
-def next_states(states: jnp.ndarray, indicator_actions: jnp.ndarray) -> jnp.ndarray:
+def next_states_legacy(states: jnp.ndarray, indicator_actions: jnp.ndarray) -> jnp.ndarray:
     """
     Compute the next batch of states in Go.
 
@@ -290,7 +290,7 @@ def next_states(states: jnp.ndarray, indicator_actions: jnp.ndarray) -> jnp.ndar
                      next_states_)
 
 
-def next_states_v2(states: jnp.ndarray, actions_1d: jnp.ndarray) -> jnp.ndarray:
+def next_states(states: jnp.ndarray, actions_1d: jnp.ndarray) -> jnp.ndarray:
     """
     Compute the next batch of states in Go.
 
@@ -333,7 +333,7 @@ def get_children(states: jnp.ndarray) -> jnp.ndarray:
     state_shape = states.shape[-3:]
     flattened_states = jnp.reshape(states, (batch_size * action_size, *state_shape))
     flattened_all_actions_1d = jnp.reshape(all_actions_1d, batch_size * action_size)
-    flattened_children = next_states_v2(flattened_states, flattened_all_actions_1d)
+    flattened_children = next_states(flattened_states, flattened_all_actions_1d)
     return jnp.reshape(flattened_children, (batch_size, action_size, *state_shape))
 
 

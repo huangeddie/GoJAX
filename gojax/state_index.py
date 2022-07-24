@@ -127,7 +127,7 @@ def at_location_per_turn(states, turns, row, col):
         states.shape[0], col)]
 
 
-def action_2d_indices_to_indicator(actions_2d, states):
+def action_2d_to_indicator(actions_2d: jnp.ndarray, states: jnp.ndarray):
     """
     Converts an array of action 2D indices into their sparse indicator array form.
 
@@ -145,7 +145,7 @@ def action_2d_indices_to_indicator(actions_2d, states):
     return indicator_actions
 
 
-def action_1d_indices_to_indicator(actions_1d: jnp.ndarray, nrows: int, ncols: int):
+def action_1d_to_indicator(actions_1d: jnp.ndarray, nrows: int, ncols: int):
     """
     Converts an array of action 1D indices into their sparse indicator array form.
 
@@ -162,7 +162,7 @@ def action_1d_indices_to_indicator(actions_1d: jnp.ndarray, nrows: int, ncols: i
     return jnp.reshape(indicator_actions[:, :-1], (batch_size, nrows, ncols))
 
 
-def action_indicators_to_1d_indices(indicator_actions):
+def action_indicator_to_1d(indicator_actions: jnp.ndarray):
     """
     Converts an array of indicator actions to their corresponding action indices.
 

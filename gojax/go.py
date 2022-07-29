@@ -123,7 +123,7 @@ def compute_area_sizes(states: jnp.ndarray) -> jnp.ndarray:
     :param states: a batch array of N Go games.
     :return: an N x 2 integer array.
     """
-    return jnp.sum(compute_areas(states), axis=(2, 3))
+    return jnp.sum(compute_areas(states), axis=(2, 3), dtype='uint16')
 
 
 def compute_winning(states: jnp.ndarray) -> jnp.ndarray:

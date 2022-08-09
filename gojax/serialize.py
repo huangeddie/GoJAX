@@ -197,6 +197,8 @@ def _encode_single_state(state: jnp.ndarray) -> str:
     if done:
         macros.append('END=T')
     board_str += ';'.join(macros)
+    if len(macros):
+        board_str += '\n'
     return board_str
 
 

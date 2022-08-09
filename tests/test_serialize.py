@@ -181,7 +181,7 @@ class DecodeStatesTestCase(unittest.TestCase):
 
 class EncodeStatesTestCase(unittest.TestCase):
 
-    def test_two_states(self):
+    def test_three_states(self):
         states = gojax.decode_states("""
                                     _ _ _
                                     _ _ _
@@ -191,9 +191,14 @@ class EncodeStatesTestCase(unittest.TestCase):
                                     _ B _
                                     _ _ _
                                     TURN=W;PASS=T;END=T
+                                    
+                                    _ _ _
+                                    _ W _
+                                    _ _ _
                                     """)
         self.assertEqual(gojax.encode_states(states),
-                         "_ _ _ \n_ _ _ \n_ _ _ \n\n_ _ _ \n_ B _ \n_ _ _ \nTURN=W;PASS=T;END=T")
+                         "_ _ _ \n_ _ _ \n_ _ _ \n\n_ _ _ \n_ B _ \n_ _ _ \nTURN=W;PASS=T;END=T\n\n"
+                         "_ _ _ \n_ W _ \n_ _ _ \n")
 
 
 if __name__ == '__main__':

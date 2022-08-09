@@ -246,7 +246,7 @@ class GoTestCase(chex.TestCase):
         \tBlack Area: 1, White Area: 1
         """)
 
-        self.assertEqual(serialize.get_pretty_string(state[0]), expected_str)
+        self.assertEqual(serialize.get_string(state[0]), expected_str)
 
     def test_compute_areas_empty(self):
         state = serialize.decode_states("""

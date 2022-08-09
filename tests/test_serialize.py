@@ -179,5 +179,21 @@ class DecodeStatesTestCase(unittest.TestCase):
         self.assertTrue(state[0, gojax.KILLED_CHANNEL_INDEX, 0, 0])
 
 
+class EncodeStatesTestCase(unittest.TestCase):
+
+    def test_two_states(self):
+        states = gojax.decode_states("""
+                                    _ _ _
+                                    _ _ _
+                                    _ _ _
+                                    
+                                    _ _ _
+                                    _ B _
+                                    _ _ _
+                                    TURN=W;PASS=T;END=T
+                                    """)
+        self.assertEqual(gojax.encode_states(states), "___\n___\n___\n\n___\n_B_\n___\nTURN=W;PASS=T;END=T")
+
+
 if __name__ == '__main__':
     unittest.main()

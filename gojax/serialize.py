@@ -59,8 +59,8 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
     return states
 
 
-def decode_states(serialized_states: str, turn: bool = gojax.BLACKS_TURN, passed: bool = False,
-                  komi=None, ended: bool = False):
+def decode_states(serialized_states: str, turn: bool = gojax.BLACKS_TURN, passed: bool = False, komi=None,
+                  ended: bool = False):
     """
     Creates game boards from a human-readable serialzied string.
 
@@ -121,7 +121,7 @@ def _get_second_character_go_pretty_string(i, j, size):
     return character
 
 
-def get_pretty_string(state):
+def get_string(state):
     """
     Creates a human-friendly string of the given state.
 
@@ -170,10 +170,51 @@ def get_pretty_string(state):
     return board_str
 
 
-def print_pretty_state(state):
+def _encode_single_state(state: jnp.ndarray) -> str:
+    if jnp.ndim(state) == 4 and state.shape[0] == 1:
+        state = jnp.squeeze(state, axis=0)
+    board_str = ''
+    size = state.shape[1]
+    for i in range(size):
+        for j in range(size):
+            if state[gojax.BLACK_CHANNEL_INDEX, i, j]:
+                board_str += 'B'
+            elif state[gojax.WHITE_CHANNEL_INDEX, i, j]:
+                board_str += 'W'
+            else:
+                board_str += '_'
+        board_str += '\n'
+
+    done = jnp.alltrue(state[gojax.END_CHANNEL_INDEX])
+    previous_player_passed = jnp.alltrue(state[gojax.PASS_CHANNEL_INDEX])
+    turn = jnp.alltrue(state[gojax.TURN_CHANNEL_INDEX])
+    macros = []
+    if turn:
+        macros.append('TURN=W')
+    if previous_player_passed:
+        macros.append('PASS=T')
+    if done:
+        macros.append('END=T')
+    board_str += ';'.join(macros)
+    return board_str
+
+
+def encode_states(states: jnp.ndarray) -> str:
+    """
+    Encodes a batch of states into a string encoding.
+
+    NOTE: Does not include KOMI / KILLED pieces.
+
+    :param states:
+    :return: Encoded string of states.
+    """
+    return '\n'.join(map(lambda state: _encode_single_state(state), states))
+
+
+def print_state(state):
     """
     Prints a human-friendly string of the given state.
 
     :param state: (1 x) C x B x B boolean array.
     """
-    print(get_pretty_string(state))
+    print(get_string(state))

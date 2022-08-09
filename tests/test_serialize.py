@@ -192,7 +192,8 @@ class EncodeStatesTestCase(unittest.TestCase):
                                     _ _ _
                                     TURN=W;PASS=T;END=T
                                     """)
-        self.assertEqual(gojax.encode_states(states), "___\n___\n___\n\n___\n_B_\n___\nTURN=W;PASS=T;END=T")
+        self.assertEqual(gojax.encode_states(states),
+                         "_ _ _ \n_ _ _ \n_ _ _ \n\n_ _ _ \n_ B _ \n_ _ _ \nTURN=W;PASS=T;END=T")
 
 
 if __name__ == '__main__':

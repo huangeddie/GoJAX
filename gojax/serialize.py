@@ -183,6 +183,7 @@ def _encode_single_state(state: jnp.ndarray) -> str:
                 board_str += 'W'
             else:
                 board_str += '_'
+            board_str += ' '
         board_str += '\n'
 
     done = jnp.alltrue(state[gojax.END_CHANNEL_INDEX])

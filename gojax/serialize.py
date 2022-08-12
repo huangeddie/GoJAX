@@ -9,7 +9,7 @@ import gojax
 CAP_LETTERS = 'ABCDEFGHIJKLMNOPQRS'
 
 
-def _decode_single_state(encode_str, ended, komi, passed, turn):
+def _decode_single_state(encode_str, ended, passed, turn):
     lines = encode_str.splitlines()
     board_size = len(lines[0].split())
     states = gojax.new_states(board_size, batch_size=1)
@@ -19,6 +19,8 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
                 states = states.at[0, gojax.BLACK_CHANNEL_INDEX, i, j].set(True)
             elif char == 'W':
                 states = states.at[0, gojax.WHITE_CHANNEL_INDEX, i, j].set(True)
+            elif char == 'X':
+                states = states.at[0, gojax.KILLED_CHANNEL_INDEX, i, j].set(True)
         if i == board_size:
             # Extract metadata.
             for key_value in line.split(';'):
@@ -34,10 +36,6 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
                         passed = True
                     elif value not in ['0', 'F', 'FALSE']:
                         raise ValueError(f'Invalid PASS value: {value}')
-                elif key == 'KOMI':
-                    row, col = value.split(',')
-                    row, col = int(row), int(col)
-                    komi = (row, col)
                 elif key == 'END':
                     if value in ['1', 'T', 'TRUE']:
                         ended = True
@@ -48,9 +46,6 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
 
     # Set the turn.
     states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(turn)
-    # Set killed pieces.
-    if komi:
-        states = states.at[:, gojax.KILLED_CHANNEL_INDEX, komi[0], komi[1]].set(True)
     # Set passed.
     states = states.at[0, gojax.PASS_CHANNEL_INDEX].set(passed)
     # Set ended.
@@ -59,8 +54,7 @@ def _decode_single_state(encode_str, ended, komi, passed, turn):
     return states
 
 
-def decode_states(serialized_states: str, turn: bool = gojax.BLACKS_TURN, passed: bool = False, komi=None,
-                  ended: bool = False):
+def decode_states(serialized_states: str, turn: bool = gojax.BLACKS_TURN, passed: bool = False, ended: bool = False):
     """
     Creates game boards from a human-readable serialzied string.
 
@@ -72,14 +66,13 @@ def decode_states(serialized_states: str, turn: bool = gojax.BLACKS_TURN, passed
     W _
 
     B W
-    W _
-    TURN=W;PASS=TRUE;KOMI=1,1;END=FALSE
+    W X
+    TURN=W;PASS=TRUE;END=FALSE
     ```
 
     :param serialized_states: string representations of the Go games.
     :param turn: boolean turn indicator.
     :param passed: boolean indicator if the previous move was passed.
-    :param komi: 2d action (tuple of 2 integers) or None.
     :param ended: whether the game ended.
     :return: a N x C x B X B boolean array.
     """
@@ -90,7 +83,7 @@ def decode_states(serialized_states: str, turn: bool = gojax.BLACKS_TURN, passed
     serialized_states = textwrap.dedent(serialized_states)
     states = []
     for serialized_state in serialized_states.split('\n\n'):
-        states.append(_decode_single_state(serialized_state, ended, komi, passed, turn))
+        states.append(_decode_single_state(serialized_state, ended, passed, turn))
 
     return jnp.concatenate(states)
 
@@ -144,6 +137,8 @@ def get_string(state):
                 board_str += '○'
             elif state[gojax.WHITE_CHANNEL_INDEX, i, j]:
                 board_str += '●'
+            elif state[gojax.KILLED_CHANNEL_INDEX, i, j]:
+                board_str += 'x'
             else:
                 board_str += _get_second_character_go_pretty_string(i, j, size)
 
@@ -181,6 +176,8 @@ def _encode_single_state(state: jnp.ndarray) -> str:
                 board_str += 'B'
             elif state[gojax.WHITE_CHANNEL_INDEX, i, j]:
                 board_str += 'W'
+            elif state[gojax.KILLED_CHANNEL_INDEX, i, j]:
+                board_str += 'X'
             else:
                 board_str += '_'
             board_str += ' '

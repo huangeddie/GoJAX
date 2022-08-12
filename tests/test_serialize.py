@@ -65,14 +65,6 @@ class DecodeStatesTestCase(unittest.TestCase):
                                     """)
         np.testing.assert_array_equal(gojax.get_passes(state), [True])
 
-    def test_macro_komi(self):
-        state = serialize.decode_states("""
-                                    _ _
-                                    _ _
-                                    KOMI=0,1
-                                    """)
-        np.testing.assert_array_equal(gojax.get_killed(state), [[[False, True], [False, False]]])
-
     def test_macro_end(self):
         state = serialize.decode_states("""
                                     _ _
@@ -85,11 +77,10 @@ class DecodeStatesTestCase(unittest.TestCase):
         state = serialize.decode_states("""
                                     _ _
                                     _ _
-                                    TURN=W;PASS=TRUE;KOMI=1,1;END=True
+                                    TURN=W;PASS=TRUE;END=True
                                     """)
         np.testing.assert_array_equal(gojax.get_turns(state), [True])
         np.testing.assert_array_equal(gojax.get_passes(state), [True])
-        np.testing.assert_array_equal(gojax.get_killed(state), [[[False, False], [False, True]]])
         np.testing.assert_array_equal(gojax.get_ended(state), [True])
 
     def test_turn(self):
@@ -168,18 +159,18 @@ class DecodeStatesTestCase(unittest.TestCase):
         np.testing.assert_array_equal(state[0, gojax.END_CHANNEL_INDEX],
                                       jnp.ones_like(state[0, gojax.END_CHANNEL_INDEX]))
 
-    def test_komi(self):
-        state_str = """
-                    _ _ _ _
-                    _ _ _ _
-                    _ _ _ _
-                    _ _ _ _
-                    """
-        state = serialize.decode_states(state_str, komi=(0, 0))
-        self.assertTrue(state[0, gojax.KILLED_CHANNEL_INDEX, 0, 0])
-
 
 class EncodeStatesTestCase(unittest.TestCase):
+
+    def test_state(self):
+        states = gojax.new_states(3)
+        states = states.at[0, gojax.BLACK_CHANNEL_INDEX, 0, 0].set(True)
+        states = states.at[0, gojax.WHITE_CHANNEL_INDEX, 0, 1].set(True)
+        states = states.at[0, gojax.KILLED_CHANNEL_INDEX, 0, 2].set(True)
+        states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
+        states = states.at[0, gojax.PASS_CHANNEL_INDEX].set(True)
+        states = states.at[0, gojax.END_CHANNEL_INDEX].set(True)
+        self.assertEqual(gojax.encode_states(states), 'B W X \n_ _ _ \n_ _ _ \nTURN=W;PASS=T;END=T\n')
 
     def test_three_states(self):
         states = gojax.decode_states("""

@@ -35,10 +35,9 @@ class InvalidMovesTestCase(unittest.TestCase):
     def test_compute_actions1d_are_invalid_komi(self):
         state_str = """
                     _ B W _
-                    B W _ W
+                    B W X W
                     _ B W _
                     _ _ _ _
-                    KOMI=1,2
                     """
         state = serialize.decode_states(state_str, gojax.BLACKS_TURN)
         np.testing.assert_array_equal(gojax.compute_actions1d_are_invalid(state, actions_1d=6)[0],

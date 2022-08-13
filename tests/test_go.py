@@ -30,69 +30,69 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(new_states, expected_output)
         chex.assert_type(new_states, bool)
 
-    def test_white_moves_second(self):
+    def test_white_moves_second_legacy(self):
         state = gojax.new_states(4)
         state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([(0, 0)], state))
         self.assertTrue(jnp.alltrue(state[0, gojax.TURN_CHANNEL_INDEX]))
 
-    def test_white_moves_second_v2(self):
+    def test_white_moves_second(self):
         state = gojax.new_states(board_size=4)
         state = gojax.next_states(state, actions_1d=jnp.array([0]))
         self.assertTrue(jnp.alltrue(state[0, gojax.TURN_CHANNEL_INDEX]))
 
-    def test_black_moves_third(self):
+    def test_black_moves_third_legacy(self):
         state = gojax.new_states(4)
         state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
         state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.TURN_CHANNEL_INDEX], jnp.zeros_like(state[0, gojax.TURN_CHANNEL_INDEX]))))
 
-    def test_black_moves_third_v2(self):
+    def test_black_moves_third(self):
         state = gojax.new_states(board_size=4)
         state = gojax.next_states(state, actions_1d=jnp.array([16]))
         state = gojax.next_states(state, actions_1d=jnp.array([16]))
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.TURN_CHANNEL_INDEX], jnp.zeros_like(state[0, gojax.TURN_CHANNEL_INDEX]))))
 
-    def test_black_and_white_moves_in_batch(self):
+    def test_black_and_white_moves_in_batch_legacy(self):
         states = gojax.new_states(4, batch_size=2)
         states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
         np.testing.assert_array_equal(gojax.get_turns(states), [True, False])
         states = gojax.next_states_legacy(states, state_index.action_2d_to_indicator([None, None], states))
         np.testing.assert_array_equal(gojax.get_turns(states), [False, True])
 
-    def test_black_and_white_moves_in_batch_v2(self):
+    def test_black_and_white_moves_in_batch(self):
         states = gojax.new_states(board_size=4, batch_size=2)
         states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
         np.testing.assert_array_equal(gojax.get_turns(states), [True, False])
         states = gojax.next_states(states, actions_1d=jnp.array([16, 16]))
         np.testing.assert_array_equal(gojax.get_turns(states), [False, True])
 
-    def test_pass_changes_turn(self):
+    def test_pass_changes_turn_legacy(self):
         state = gojax.new_states(2)
         self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([False])))
         state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
         self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([True])))
 
-    def test_pass_changes_turn_v2(self):
+    def test_pass_changes_turn(self):
         state = gojax.new_states(board_size=2)
         self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([False])))
         state = gojax.next_states(state, actions_1d=jnp.array([4]))
         self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([True])))
+
+    def test_pass_sets_pass_layer_legacy(self):
+        state = gojax.new_states(2)
+        state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
+        self.assertTrue(
+            jnp.alltrue(lax.eq(state[0, gojax.PASS_CHANNEL_INDEX], jnp.ones_like(state[0, gojax.PASS_CHANNEL_INDEX]))))
 
     def test_pass_sets_pass_layer(self):
-        state = gojax.new_states(2)
-        state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
-        self.assertTrue(
-            jnp.alltrue(lax.eq(state[0, gojax.PASS_CHANNEL_INDEX], jnp.ones_like(state[0, gojax.PASS_CHANNEL_INDEX]))))
-
-    def test_pass_sets_pass_layer_v2(self):
         state = gojax.new_states(board_size=2)
         state = gojax.next_states(state, actions_1d=jnp.array([4]))
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.PASS_CHANNEL_INDEX], jnp.ones_like(state[0, gojax.PASS_CHANNEL_INDEX]))))
 
-    def test_two_consecutive_passes_ends_game(self):
+    def test_two_consecutive_passes_ends_game_legacy(self):
         state = gojax.new_states(2)
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX], jnp.zeros_like(state[0, gojax.END_CHANNEL_INDEX]))))
@@ -103,7 +103,7 @@ class GoTestCase(chex.TestCase):
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX], jnp.ones_like(state[0, gojax.END_CHANNEL_INDEX]))))
 
-    def test_two_consecutive_passes_ends_game_v2(self):
+    def test_two_consecutive_passes_ends_game(self):
         state = gojax.new_states(board_size=2)
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX], jnp.zeros_like(state[0, gojax.END_CHANNEL_INDEX]))))
@@ -128,7 +128,7 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(gojax.get_ended(state), [True])
         np.testing.assert_array_equal(gojax.get_ended(next_state), [True])
 
-    def test_game_end_no_op_pieces_v2(self):
+    def test_game_end_no_op_pieces(self):
         state = serialize.decode_states("""
                         _ _ _
                         _ _ _

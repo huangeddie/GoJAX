@@ -19,12 +19,16 @@ import state_index
 class GoTestCase(chex.TestCase):
     """Tests general Go functions."""
 
-    @parameterized.named_parameters({'testcase_name': 'board_size_3_batch_size_1', 'board_size': 3, 'batch_size': 1,
-                                     'expected_output': jnp.zeros((1, gojax.NUM_CHANNELS, 3, 3), dtype=bool)},
-                                    {'testcase_name': 'board_size_4_batch_size_1', 'board_size': 4, 'batch_size': 1,
-                                     'expected_output': jnp.zeros((1, gojax.NUM_CHANNELS, 4, 4), dtype=bool)},
-                                    {'testcase_name': 'board_size_3_batch_size_2', 'board_size': 3, 'batch_size': 2,
-                                     'expected_output': jnp.zeros((2, gojax.NUM_CHANNELS, 3, 3), dtype=bool)}, )
+    @parameterized.named_parameters({
+        'testcase_name': 'board_size_3_batch_size_1', 'board_size': 3, 'batch_size': 1,
+        'expected_output': jnp.zeros((1, gojax.NUM_CHANNELS, 3, 3), dtype=bool)
+    }, {
+        'testcase_name': 'board_size_4_batch_size_1', 'board_size': 4, 'batch_size': 1,
+        'expected_output': jnp.zeros((1, gojax.NUM_CHANNELS, 4, 4), dtype=bool)
+    }, {
+        'testcase_name': 'board_size_3_batch_size_2', 'board_size': 3, 'batch_size': 2,
+        'expected_output': jnp.zeros((2, gojax.NUM_CHANNELS, 3, 3), dtype=bool)
+    }, )
     def test_new_states_(self, board_size, batch_size, expected_output):
         new_states = gojax.new_states(board_size, batch_size)
         np.testing.assert_array_equal(new_states, expected_output)
@@ -79,6 +83,14 @@ class GoTestCase(chex.TestCase):
         self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([False])))
         state = gojax.next_states(state, actions_1d=jnp.array([4]))
         self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([True])))
+
+    def test_pass_clears_killed_layer(self):
+        state = gojax.decode_states("""
+                                    X X X
+                                    X X X
+                                    X X X
+                                    """)
+        self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([9]))[0, gojax.KILLED_CHANNEL_INDEX]), 0)
 
     def test_pass_sets_pass_layer_legacy(self):
         state = gojax.new_states(2)

@@ -84,11 +84,19 @@ class GoTestCase(chex.TestCase):
         state = gojax.next_states(state, actions_1d=jnp.array([4]))
         self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([True])))
 
+    def test_invalid_move_clears_killed_layer(self):
+        state = gojax.decode_states("""
+                                    W W _ 
+                                    W X W 
+                                    X W X 
+                                    """)
+        self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([4]))[0, gojax.KILLED_CHANNEL_INDEX]), 0)
+
     def test_pass_clears_killed_layer(self):
         state = gojax.decode_states("""
-                                    X X X
-                                    X X X
-                                    X X X
+                                    W W _ 
+                                    W X W 
+                                    X W X 
                                     """)
         self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([9]))[0, gojax.KILLED_CHANNEL_INDEX]), 0)
 

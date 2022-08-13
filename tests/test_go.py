@@ -92,6 +92,15 @@ class GoTestCase(chex.TestCase):
                                     """)
         self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([4]))[0, gojax.KILLED_CHANNEL_INDEX]), 0)
 
+    def test_invalid_move_end_game(self):
+        state = gojax.decode_states("""
+                                    W W _ 
+                                    W X W 
+                                    X W X 
+                                    PASS=T
+                                    """)
+        self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([4]))[0, gojax.END_CHANNEL_INDEX]), 9)
+
     def test_pass_clears_killed_layer(self):
         state = gojax.decode_states("""
                                     W W _ 

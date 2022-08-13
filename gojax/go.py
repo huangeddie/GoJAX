@@ -290,9 +290,12 @@ def next_states(states: jnp.ndarray, actions_1d: jnp.ndarray) -> jnp.ndarray:
 
     # If the action is invalid or the game ended, set the move to pass and clear the killed layer, otherwise return what
     # would be the next state.
-    return jnp.where(jnp.expand_dims(invalid_actions | state_index.get_ended(states), (1, 2, 3)),
-                     change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True).at[:,
-                     constants.KILLED_CHANNEL_INDEX].set(False), next_states_)
+    ended = jnp.alltrue(states[:, constants.END_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
+    passed_state = change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True).at[:,
+                   constants.KILLED_CHANNEL_INDEX].set(False).at[:, constants.END_CHANNEL_INDEX].set(
+        previously_passed | ended)
+    return jnp.where(jnp.expand_dims(invalid_actions | state_index.get_ended(states), (1, 2, 3)), passed_state,
+                     next_states_)
 
 
 def get_children(states: jnp.ndarray) -> jnp.ndarray:

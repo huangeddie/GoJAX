@@ -1,13 +1,17 @@
 import jax
-from jax import numpy as jnp, lax
+from jax import lax
+from jax import numpy as jnp
 
 import gojax
 
 
-def sample_all_actions(states, logits, rng_key):
+def sample_all_indicator_actions(states, logits, rng_key):
     """
     Samples the all actions from the logits with probability equal to softmax(
     raw_action_logits).
+
+    If one wants to sample all 1D actions, they can simply use
+    `jax.random.categorical(rng_key, logits)`.
 
     :param states: a batch array of N Go games.
     :param logits: an N x A float array of logits.
@@ -74,11 +78,12 @@ def sample_next_states(step, states, logits, rng_key,
     :param states: a batch array of N Go games.
     :param logits: an N x A float array of logits.
     :param rng_key: JAX RNG key.
-    :param sampling_fn: sampling function. Either sample_all_actions or
+    :param sampling_fn: sampling function. Either sample_all_indicator_actions or
     sample_non_occupied_indicator_actions.
     :return: a batch array of N Go games.
     """
-    return gojax.next_states_legacy(states, sampling_fn(states, logits, jax.random.fold_in(rng_key, step)))
+    return gojax.next_states_legacy(states,
+                                    sampling_fn(states, logits, jax.random.fold_in(rng_key, step)))
 
 
 def sample_next_states_v2(step, states, logits, rng_key,
@@ -91,7 +96,7 @@ def sample_next_states_v2(step, states, logits, rng_key,
     :param states: a batch array of N Go games.
     :param logits: an N x A float array of logits.
     :param rng_key: JAX RNG key.
-    :param actions1d_sampling_fn: sampling function. Either sample_all_actions or
+    :param actions1d_sampling_fn: sampling function. Either sample_all_indicator_actions or
     sample_non_occupied_indicator_actions.
     :return: a batch array of N Go games.
     """
@@ -109,7 +114,7 @@ def sample_random_state(board_size, batch_size, num_steps, logits, rng_key,
     :param logits: an N x A float array of logits.
     :param num_steps: number of steps to take (integer).
     :param rng_key: JAX RNG key.
-    :param sampling_fn: sampling function. Either sample_all_actions or
+    :param sampling_fn: sampling function. Either sample_all_indicator_actions or
     sample_non_occupied_indicator_actions.
     :return: the final state of the game (trajectory).
     """
@@ -129,7 +134,7 @@ def sample_random_state_v2(board_size, batch_size, num_steps, logits, rng_key,
     :param logits: an N x A float array of logits.
     :param num_steps: number of steps to take (integer).
     :param rng_key: JAX RNG key.
-    :param actions1d_sampling_fn: sampling function. Either sample_all_actions or
+    :param actions1d_sampling_fn: sampling function. Either sample_all_indicator_actions or
     sample_non_occupied_indicator_actions.
     :return: the final state of the game (trajectory).
     """

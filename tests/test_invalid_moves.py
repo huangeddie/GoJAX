@@ -5,7 +5,7 @@ Computing invalid moves is arguably the more complicated part of the Go game log
 deserved its own dedicated test file.
 """
 
-# pylint: disable=missing-function-docstring,too-many-public-methods,no-self-use,duplicate-code
+# pylint: disable=missing-function-docstring,too-many-public-methods,duplicate-code
 
 import unittest
 

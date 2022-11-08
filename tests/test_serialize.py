@@ -4,7 +4,6 @@ import jax.numpy as jnp
 import numpy as np
 
 import gojax
-import serialize
 
 
 class DecodeStatesTestCase(unittest.TestCase):
@@ -15,21 +14,22 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         self.assertEqual((1, 6, 4, 4), state.shape)
 
     def test_multi_states(self):
-        states = serialize.decode_states("""
+        states = gojax.decode_states("""
                                    _ _
                                    _ _
 
                                    _ _
                                    _ _
                                    """)
-        np.testing.assert_array_equal(states, jnp.zeros((2, gojax.NUM_CHANNELS, 2, 2)))
+        np.testing.assert_array_equal(
+            states, jnp.zeros((2, gojax.NUM_CHANNELS, 2, 2)))
 
     def test_multi_states_with_macro(self):
-        states = serialize.decode_states("""
+        states = gojax.decode_states("""
                                    _ _
                                    _ _
 
@@ -46,11 +46,11 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         np.testing.assert_array_equal(state, jnp.zeros_like(state))
 
     def test_macro_turn(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                                     _ _
                                     _ _
                                     TURN=WHITE
@@ -58,7 +58,7 @@ class DecodeStatesTestCase(unittest.TestCase):
         np.testing.assert_array_equal(gojax.get_turns(state), [True])
 
     def test_macro_pass(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                                     _ _
                                     _ _
                                     PASS=1
@@ -66,7 +66,7 @@ class DecodeStatesTestCase(unittest.TestCase):
         np.testing.assert_array_equal(gojax.get_passes(state), [True])
 
     def test_macro_end(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                                     _ _
                                     _ _
                                     END=T
@@ -74,7 +74,7 @@ class DecodeStatesTestCase(unittest.TestCase):
         np.testing.assert_array_equal(gojax.get_ended(state), [True])
 
     def test_all_macros(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                                     _ _
                                     _ _
                                     TURN=W;PASS=TRUE;END=True
@@ -90,7 +90,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = serialize.decode_states(state_str, gojax.WHITES_TURN)
+        state = gojax.decode_states(state_str, gojax.WHITES_TURN)
         np.testing.assert_array_equal(state[0, gojax.TURN_CHANNEL_INDEX],
                                       jnp.ones_like(state[0, gojax.TURN_CHANNEL_INDEX]))
 
@@ -101,7 +101,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         self.assertTrue(state[0, gojax.BLACK_CHANNEL_INDEX, 0, 0])
 
     def test_two_pieces(self):
@@ -111,7 +111,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ W
                     """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         self.assertTrue(state[0, gojax.BLACK_CHANNEL_INDEX, 0, 0])
         self.assertTrue(state[0, gojax.WHITE_CHANNEL_INDEX, 3, 3])
 
@@ -122,7 +122,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         np.testing.assert_array_equal(state[0, gojax.PASS_CHANNEL_INDEX],
                                       jnp.zeros_like(state[0, gojax.PASS_CHANNEL_INDEX]))
 
@@ -133,7 +133,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = serialize.decode_states(state_str, passed=True)
+        state = gojax.decode_states(state_str, passed=True)
         np.testing.assert_array_equal(state[0, gojax.PASS_CHANNEL_INDEX],
                                       jnp.ones_like(state[0, gojax.PASS_CHANNEL_INDEX]))
 
@@ -144,7 +144,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         np.testing.assert_array_equal(state[0, gojax.END_CHANNEL_INDEX],
                                       jnp.zeros_like(state[0, gojax.END_CHANNEL_INDEX]))
 
@@ -155,7 +155,7 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     _ _ _ _
                     """
-        state = serialize.decode_states(state_str, ended=True)
+        state = gojax.decode_states(state_str, ended=True)
         np.testing.assert_array_equal(state[0, gojax.END_CHANNEL_INDEX],
                                       jnp.ones_like(state[0, gojax.END_CHANNEL_INDEX]))
 
@@ -170,7 +170,8 @@ class EncodeStatesTestCase(unittest.TestCase):
         states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
         states = states.at[0, gojax.PASS_CHANNEL_INDEX].set(True)
         states = states.at[0, gojax.END_CHANNEL_INDEX].set(True)
-        self.assertEqual(gojax.encode_states(states), 'B W X \n_ _ _ \n_ _ _ \nTURN=W;PASS=T;END=T\n')
+        self.assertEqual(gojax.encode_states(states),
+                         'B W X \n_ _ _ \n_ _ _ \nTURN=W;PASS=T;END=T\n')
 
     def test_three_states(self):
         states = gojax.decode_states("""

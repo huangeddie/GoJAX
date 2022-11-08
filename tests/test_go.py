@@ -12,8 +12,6 @@ from jax import lax
 from jax import nn
 
 import gojax
-import serialize
-import state_index
 
 
 class GoTestCase(chex.TestCase):
@@ -36,7 +34,8 @@ class GoTestCase(chex.TestCase):
 
     def test_white_moves_second_legacy(self):
         state = gojax.new_states(4)
-        state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([(0, 0)], state))
+        state = gojax.next_states_legacy(
+            state, gojax.action_2d_to_indicator([(0, 0)], state))
         self.assertTrue(jnp.alltrue(state[0, gojax.TURN_CHANNEL_INDEX]))
 
     def test_white_moves_second(self):
@@ -46,8 +45,10 @@ class GoTestCase(chex.TestCase):
 
     def test_black_moves_third_legacy(self):
         state = gojax.new_states(4)
-        state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
-        state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
+        state = gojax.next_states_legacy(
+            state, gojax.action_2d_to_indicator([None], state))
+        state = gojax.next_states_legacy(
+            state, gojax.action_2d_to_indicator([None], state))
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.TURN_CHANNEL_INDEX], jnp.zeros_like(state[0, gojax.TURN_CHANNEL_INDEX]))))
 
@@ -62,7 +63,8 @@ class GoTestCase(chex.TestCase):
         states = gojax.new_states(4, batch_size=2)
         states = states.at[0, gojax.TURN_CHANNEL_INDEX].set(True)
         np.testing.assert_array_equal(gojax.get_turns(states), [True, False])
-        states = gojax.next_states_legacy(states, state_index.action_2d_to_indicator([None, None], states))
+        states = gojax.next_states_legacy(
+            states, gojax.action_2d_to_indicator([None, None], states))
         np.testing.assert_array_equal(gojax.get_turns(states), [False, True])
 
     def test_black_and_white_moves_in_batch(self):
@@ -74,15 +76,20 @@ class GoTestCase(chex.TestCase):
 
     def test_pass_changes_turn_legacy(self):
         state = gojax.new_states(2)
-        self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([False])))
-        state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
-        self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([True])))
+        self.assertTrue(jnp.alltrue(
+            gojax.get_turns(state) == jnp.array([False])))
+        state = gojax.next_states_legacy(
+            state, gojax.action_2d_to_indicator([None], state))
+        self.assertTrue(jnp.alltrue(
+            gojax.get_turns(state) == jnp.array([True])))
 
     def test_pass_changes_turn(self):
         state = gojax.new_states(board_size=2)
-        self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([False])))
+        self.assertTrue(jnp.alltrue(
+            gojax.get_turns(state) == jnp.array([False])))
         state = gojax.next_states(state, actions_1d=jnp.array([4]))
-        self.assertTrue(jnp.alltrue(gojax.get_turns(state) == jnp.array([True])))
+        self.assertTrue(jnp.alltrue(
+            gojax.get_turns(state) == jnp.array([True])))
 
     def test_invalid_move_clears_killed_layer(self):
         state = gojax.decode_states("""
@@ -90,7 +97,8 @@ class GoTestCase(chex.TestCase):
                                     W X W 
                                     X W X 
                                     """)
-        self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([4]))[0, gojax.KILLED_CHANNEL_INDEX]), 0)
+        self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([4]))[
+                         0, gojax.KILLED_CHANNEL_INDEX]), 0)
 
     def test_invalid_move_end_game(self):
         state = gojax.decode_states("""
@@ -99,7 +107,8 @@ class GoTestCase(chex.TestCase):
                                     X W X 
                                     PASS=T
                                     """)
-        self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([4]))[0, gojax.END_CHANNEL_INDEX]), 9)
+        self.assertEqual(jnp.sum(gojax.next_states(
+            state, jnp.array([4]))[0, gojax.END_CHANNEL_INDEX]), 9)
 
     def test_pass_clears_killed_layer(self):
         state = gojax.decode_states("""
@@ -107,11 +116,13 @@ class GoTestCase(chex.TestCase):
                                     W X W 
                                     X W X 
                                     """)
-        self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([9]))[0, gojax.KILLED_CHANNEL_INDEX]), 0)
+        self.assertEqual(jnp.sum(gojax.next_states(state, jnp.array([9]))[
+                         0, gojax.KILLED_CHANNEL_INDEX]), 0)
 
     def test_pass_sets_pass_layer_legacy(self):
         state = gojax.new_states(2)
-        state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
+        state = gojax.next_states_legacy(
+            state, gojax.action_2d_to_indicator([None], state))
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.PASS_CHANNEL_INDEX], jnp.ones_like(state[0, gojax.PASS_CHANNEL_INDEX]))))
 
@@ -125,10 +136,12 @@ class GoTestCase(chex.TestCase):
         state = gojax.new_states(2)
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX], jnp.zeros_like(state[0, gojax.END_CHANNEL_INDEX]))))
-        state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
+        state = gojax.next_states_legacy(
+            state, gojax.action_2d_to_indicator([None], state))
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX], jnp.zeros_like(state[0, gojax.END_CHANNEL_INDEX]))))
-        state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([None], state))
+        state = gojax.next_states_legacy(
+            state, gojax.action_2d_to_indicator([None], state))
         self.assertTrue(
             jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX], jnp.ones_like(state[0, gojax.END_CHANNEL_INDEX]))))
 
@@ -144,21 +157,24 @@ class GoTestCase(chex.TestCase):
             jnp.alltrue(lax.eq(state[0, gojax.END_CHANNEL_INDEX], jnp.ones_like(state[0, gojax.END_CHANNEL_INDEX]))))
 
     def test_game_end_no_op_pieces(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         _ _ _
                         _ _ _
                         _ _ _
                         """, ended=True)
-        next_state = gojax.next_states_legacy(state, state_index.action_2d_to_indicator([(1, 1)], state))
+        next_state = gojax.next_states_legacy(
+            state, gojax.action_2d_to_indicator([(1, 1)], state))
         np.testing.assert_array_equal(state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
                                       next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
-        np.testing.assert_array_equal(gojax.get_turns(state), [gojax.BLACKS_TURN])
-        np.testing.assert_array_equal(gojax.get_turns(next_state), [gojax.WHITES_TURN])
+        np.testing.assert_array_equal(
+            gojax.get_turns(state), [gojax.BLACKS_TURN])
+        np.testing.assert_array_equal(
+            gojax.get_turns(next_state), [gojax.WHITES_TURN])
         np.testing.assert_array_equal(gojax.get_ended(state), [True])
         np.testing.assert_array_equal(gojax.get_ended(next_state), [True])
 
     def test_game_end_no_op_pieces(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         _ _ _
                         _ _ _
                         _ _ _
@@ -166,33 +182,39 @@ class GoTestCase(chex.TestCase):
         next_state = gojax.next_states(state, actions_1d=jnp.array([4]))
         np.testing.assert_array_equal(state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
                                       next_state[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
-        np.testing.assert_array_equal(gojax.get_turns(state), [gojax.BLACKS_TURN])
-        np.testing.assert_array_equal(gojax.get_turns(next_state), [gojax.WHITES_TURN])
+        np.testing.assert_array_equal(
+            gojax.get_turns(state), [gojax.BLACKS_TURN])
+        np.testing.assert_array_equal(
+            gojax.get_turns(next_state), [gojax.WHITES_TURN])
         np.testing.assert_array_equal(gojax.get_ended(state), [True])
         np.testing.assert_array_equal(gojax.get_ended(next_state), [True])
 
     def test_no_op_second_state(self):
-        first_state = serialize.decode_states("""
+        first_state = gojax.decode_states("""
                               _ _ _
                               _ _ _
                               _ _ _
                               """)
-        second_state = serialize.decode_states("""
+        second_state = gojax.decode_states("""
                                _ _ _
                                _ _ _
                                _ _ _
                                """, ended=True)
         states = jnp.concatenate((first_state, second_state), axis=0)
-        next_states = gojax.next_states_legacy(states, state_index.action_2d_to_indicator([(0, 0), (0, 0)], states))
+        next_states = gojax.next_states_legacy(
+            states, gojax.action_2d_to_indicator([(0, 0), (0, 0)], states))
         self.assertEqual(jnp.sum(jnp.logical_xor(states[0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
                                                  next_states[
                                                      0, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])), 1)
         np.testing.assert_array_equal(states[1, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]],
                                       next_states[1, [gojax.BLACK_CHANNEL_INDEX, gojax.WHITE_CHANNEL_INDEX]])
-        np.testing.assert_array_equal(gojax.get_turns(states), [gojax.BLACKS_TURN, gojax.BLACKS_TURN])
-        np.testing.assert_array_equal(gojax.get_turns(next_states), [gojax.WHITES_TURN, gojax.WHITES_TURN])
+        np.testing.assert_array_equal(gojax.get_turns(
+            states), [gojax.BLACKS_TURN, gojax.BLACKS_TURN])
+        np.testing.assert_array_equal(gojax.get_turns(next_states), [
+                                      gojax.WHITES_TURN, gojax.WHITES_TURN])
         np.testing.assert_array_equal(gojax.get_ended(states), [False, True])
-        np.testing.assert_array_equal(gojax.get_ended(next_states), [False, True])
+        np.testing.assert_array_equal(
+            gojax.get_ended(next_states), [False, True])
 
     def test_paint_fill(self):
         x = jnp.array([[[[1, 1, 0, 1, 1], [0, 0, 0, 1, 1], [1, 1, 0, 0, 0], [0, 1, 1, 0, 0], [0, 0, 0, 0, 0]]]],
@@ -203,15 +225,17 @@ class GoTestCase(chex.TestCase):
 
         expected_fill = jnp.array(
             [[[[1, 1, 0, 0, 0], [0, 0, 0, 0, 0], [1, 1, 0, 0, 0], [0, 1, 1, 0, 0], [0, 0, 0, 0, 0]]]], dtype=bool)
-        np.testing.assert_array_equal(gojax.paint_fill(seeds, x), expected_fill)
+        np.testing.assert_array_equal(
+            gojax.paint_fill(seeds, x), expected_fill)
 
     def test_compute_free_groups_shape(self):
         state_str = """
             _ _
             _ _ 
             """
-        state = serialize.decode_states(state_str)
-        free_black_groups = gojax.compute_free_groups(state, jnp.array([gojax.BLACKS_TURN]))
+        state = gojax.decode_states(state_str)
+        free_black_groups = gojax.compute_free_groups(
+            state, jnp.array([gojax.BLACKS_TURN]))
         self.assertEqual((1, 2, 2), free_black_groups.shape)
 
     def test_compute_free_groups_free_single_piece(self):
@@ -219,17 +243,20 @@ class GoTestCase(chex.TestCase):
             B _
             _ _ 
             """
-        state = serialize.decode_states(state_str)
-        free_black_groups = gojax.compute_free_groups(state, jnp.array([gojax.BLACKS_TURN]))
-        self.assertTrue(jnp.alltrue(jnp.array([[True, False], [False, False]]) == free_black_groups))
+        state = gojax.decode_states(state_str)
+        free_black_groups = gojax.compute_free_groups(
+            state, jnp.array([gojax.BLACKS_TURN]))
+        self.assertTrue(jnp.alltrue(
+            jnp.array([[True, False], [False, False]]) == free_black_groups))
 
     def test_compute_free_groups_non_free_single_piece(self):
         state_str = """
             B W
             W _ 
             """
-        state = serialize.decode_states(state_str)
-        free_black_groups = gojax.compute_free_groups(state, jnp.array([gojax.BLACKS_TURN]))
+        state = gojax.decode_states(state_str)
+        free_black_groups = gojax.compute_free_groups(
+            state, jnp.array([gojax.BLACKS_TURN]))
         self.assertTrue(jnp.alltrue(jnp.array([[False, False], [False, False]]) == free_black_groups),
                         free_black_groups)
 
@@ -241,10 +268,12 @@ class GoTestCase(chex.TestCase):
             W B W _ _
             _ _ _ _ _
             """
-        state = serialize.decode_states(state_str)
-        free_black_groups = gojax.compute_free_groups(state, jnp.array([gojax.BLACKS_TURN]))
+        state = gojax.decode_states(state_str)
+        free_black_groups = gojax.compute_free_groups(
+            state, jnp.array([gojax.BLACKS_TURN]))
         self.assertTrue(jnp.alltrue(jnp.array([[False, False, False, False, False], [False, True, False, False, False],
-                                               [False, True, False, False, False], [False, True, False, False, False],
+                                               [False, True, False, False, False], [
+                                                   False, True, False, False, False],
                                                [False, False, False, False, False], ]) == free_black_groups),
                         free_black_groups)
 
@@ -253,9 +282,11 @@ class GoTestCase(chex.TestCase):
             B _
             _ W 
             """
-        state = serialize.decode_states(state_str)
-        free_white_groups = gojax.compute_free_groups(state, jnp.array([gojax.WHITES_TURN]))
-        np.testing.assert_array_equal(free_white_groups, [[[False, False], [False, True]]])
+        state = gojax.decode_states(state_str)
+        free_white_groups = gojax.compute_free_groups(
+            state, jnp.array([gojax.WHITES_TURN]))
+        np.testing.assert_array_equal(
+            free_white_groups, [[[False, False], [False, True]]])
 
     def test_get_pretty_string(self):
         state_str = """
@@ -264,7 +295,7 @@ class GoTestCase(chex.TestCase):
             _ _ _ _
             _ _ _ _
             """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         expected_str = textwrap.dedent("""\
         \tA B C D 
         0	○═╤═╤═╗
@@ -275,10 +306,10 @@ class GoTestCase(chex.TestCase):
         \tBlack Area: 1, White Area: 1
         """)
 
-        self.assertEqual(serialize.get_string(state[0]), expected_str)
+        self.assertEqual(gojax.get_string(state[0]), expected_str)
 
     def test_compute_areas_empty(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                             _ _ _
                             _ _ _
                             _ _ _
@@ -293,7 +324,7 @@ class GoTestCase(chex.TestCase):
             _ _ _
             _ _ W
             """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         areas = gojax.compute_areas(state)
         np.testing.assert_array_equal(areas, [[[[True, False, False], [False, False, False], [False, False, False]],
                                                [[False, False, False], [False, False, False], [False, False, True]]]])
@@ -304,7 +335,7 @@ class GoTestCase(chex.TestCase):
             _ _ _
             _ _ _
             """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         areas = gojax.compute_areas(state)
         np.testing.assert_array_equal(areas, [[[[True, True, True], [True, True, True], [True, True, True]],
                                                [[False, False, False], [False, False, False], [False, False, False]]]])
@@ -317,22 +348,25 @@ class GoTestCase(chex.TestCase):
             _ _ B _ _
             _ _ _ _ _
             """
-        state = serialize.decode_states(state_str)
+        state = gojax.decode_states(state_str)
         areas = gojax.compute_areas(state)
         np.testing.assert_array_equal(areas, [[[[False, False, False, False, False], [False, False, True, False, False],
-                                                [False, True, True, True, False], [False, False, True, False, False],
+                                                [False, True, True, True, False], [
+                                                    False, False, True, False, False],
                                                 [False, False, False, False, False]],
                                                [[False, False, False, False, False], [False, True, False, False, False],
-                                                [False, False, False, False, False],
-                                                [False, False, False, False, False],
+                                                [False, False, False,
+                                                    False, False],
+                                                [False, False, False,
+                                                    False, False],
                                                 [False, False, False, False, False]]]])
 
     def test_compute_areas_batch_size_two(self):
-        states = jnp.concatenate((serialize.decode_states("""
+        states = jnp.concatenate((gojax.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
-                                            """), serialize.decode_states("""
+                                            """), gojax.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
@@ -345,15 +379,15 @@ class GoTestCase(chex.TestCase):
              [[False, False, False], [False, False, False], [False, False, False]]]])
 
     def test_compute_areas_batch_size_three(self):
-        states = jnp.concatenate((serialize.decode_states("""
+        states = jnp.concatenate((gojax.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
-                                            """), serialize.decode_states("""
+                                            """), gojax.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
-                                            """), serialize.decode_states("""
+                                            """), gojax.decode_states("""
                                               _ _ _
                                               _ W _
                                               _ _ _
@@ -368,15 +402,16 @@ class GoTestCase(chex.TestCase):
              [[True, True, True], [True, True, True], [True, True, True]]]])
 
     def test_compute_area_sizes_pieces(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         B _ _
                         _ _ _
                         _ _ W
                         """)
-        np.testing.assert_array_equal(gojax.compute_area_sizes(state), [[1, 1]])
+        np.testing.assert_array_equal(
+            gojax.compute_area_sizes(state), [[1, 1]])
 
     def test_compute_area_sizes_pieces_dtype(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         B _ _
                         _ _ _
                         _ _ W
@@ -384,53 +419,57 @@ class GoTestCase(chex.TestCase):
         chex.assert_type(gojax.compute_area_sizes(state), 'uint16')
 
     def test_compute_area_sizes_single_piece_controls_all(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         B _ _
                         _ _ _
                         _ _ _
                         """)
-        np.testing.assert_array_equal(gojax.compute_area_sizes(state), [[9, 0]])
+        np.testing.assert_array_equal(
+            gojax.compute_area_sizes(state), [[9, 0]])
 
     def test_compute_area_sizes_donut(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         _ _ _ _ _
                         _ W B _ _
                         _ B _ B _
                         _ _ B _ _
                         _ _ _ _ _
                         """)
-        np.testing.assert_array_equal(gojax.compute_area_sizes(state), [[5, 1]])
+        np.testing.assert_array_equal(
+            gojax.compute_area_sizes(state), [[5, 1]])
 
     def test_compute_area_sizes_batch_size_two(self):
-        states = jnp.concatenate((serialize.decode_states("""
+        states = jnp.concatenate((gojax.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
-                                            """), serialize.decode_states("""
+                                            """), gojax.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
                                             """)))
-        np.testing.assert_array_equal(gojax.compute_area_sizes(states), [[0, 0], [9, 0]])
+        np.testing.assert_array_equal(
+            gojax.compute_area_sizes(states), [[0, 0], [9, 0]])
 
     def test_compute_area_sizes_batch_size_three(self):
-        states = jnp.concatenate((serialize.decode_states("""
+        states = jnp.concatenate((gojax.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
-                                            """), serialize.decode_states("""
+                                            """), gojax.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
-                                            """), serialize.decode_states("""
+                                            """), gojax.decode_states("""
                                               _ _ _
                                               _ W _
                                               _ _ _
                                               """)))
-        np.testing.assert_array_equal(gojax.compute_area_sizes(states), [[0, 0], [9, 0], [0, 9]])
+        np.testing.assert_array_equal(gojax.compute_area_sizes(states), [
+                                      [0, 0], [9, 0], [0, 9]])
 
     def test_compute_winning_new_state_tie(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         _ _ _
                         _ _ _
                         _ _ _
@@ -438,7 +477,7 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(gojax.compute_winning(state), [0])
 
     def test_compute_winning_single_black(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         _ _ _
                         _ B _
                         _ _ _
@@ -446,7 +485,7 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(gojax.compute_winning(state), [1])
 
     def test_compute_winning_single_white(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         _ _ _
                         _ W _
                         _ _ _
@@ -454,7 +493,7 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(gojax.compute_winning(state), [-1])
 
     def test_compute_winning_tie_single_pieces(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         _ _ _
                         _ W _
                         _ _ B
@@ -462,7 +501,7 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(gojax.compute_winning(state), [0])
 
     def test_compute_winning_black_has_more_area_with_empty_space(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         W W _ _ _
                         W W B _ _
                         _ B _ B _
@@ -472,11 +511,11 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(gojax.compute_winning(state), [1])
 
     def test_compute_winning_batch_size_two(self):
-        states = jnp.concatenate((serialize.decode_states("""
+        states = jnp.concatenate((gojax.decode_states("""
                                             _ _ _
                                             _ _ _
                                             _ _ _
-                                            """), serialize.decode_states("""
+                                            """), gojax.decode_states("""
                                             _ _ _
                                             _ B _
                                             _ _ _
@@ -484,7 +523,7 @@ class GoTestCase(chex.TestCase):
         np.testing.assert_array_equal(gojax.compute_winning(states), [0, 1])
 
     def test_swap_perspectives_black_to_white(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         B _ _
                         _ _ _
                         _ _ W
@@ -494,10 +533,11 @@ class GoTestCase(chex.TestCase):
                                       [[False, False, False], [False, False, False], [False, False, True]])
         np.testing.assert_array_equal(swapped_perspective[0, gojax.WHITE_CHANNEL_INDEX],
                                       [[True, False, False], [False, False, False], [False, False, False]])
-        np.testing.assert_array_equal(gojax.get_turns(swapped_perspective), [gojax.WHITES_TURN])
+        np.testing.assert_array_equal(gojax.get_turns(
+            swapped_perspective), [gojax.WHITES_TURN])
 
     def test_swap_perspectives_white_to_black(self):
-        state = serialize.decode_states("""
+        state = gojax.decode_states("""
                         B _ _
                         _ _ _
                         _ _ W
@@ -507,7 +547,8 @@ class GoTestCase(chex.TestCase):
                                       [[False, False, False], [False, False, False], [False, False, True]])
         np.testing.assert_array_equal(swapped_perspective[0, gojax.WHITE_CHANNEL_INDEX],
                                       [[True, False, False], [False, False, False], [False, False, False]])
-        np.testing.assert_array_equal(gojax.get_turns(swapped_perspective), [gojax.BLACKS_TURN])
+        np.testing.assert_array_equal(gojax.get_turns(
+            swapped_perspective), [gojax.BLACKS_TURN])
 
     def test_next_two_states(self):
         action_size = 2
@@ -516,11 +557,11 @@ class GoTestCase(chex.TestCase):
         indicator_actions = jnp.reshape(nn.one_hot(jnp.arange(action_size), num_classes=board_size ** 2, dtype=bool),
                                         (action_size, board_size, board_size))
         children = gojax.next_states_legacy(states, indicator_actions)
-        expected_children = jnp.concatenate((serialize.decode_states("""
+        expected_children = jnp.concatenate((gojax.decode_states("""
                                                   B _ _
                                                   _ _ _
                                                   _ _ _
-                                                  """, turn=gojax.WHITES_TURN), serialize.decode_states("""
+                                                  """, turn=gojax.WHITES_TURN), gojax.decode_states("""
                                                   _ B _
                                                   _ _ _
                                                   _ _ _
@@ -528,14 +569,31 @@ class GoTestCase(chex.TestCase):
 
         np.testing.assert_array_equal(children, expected_children)
 
+    def test_expand_states(self):
+        states = gojax.new_states(board_size=3, batch_size=1)
+        expanded_states = gojax.expand_states(
+            states, multi_actions_1d=jnp.array([[0, 2]]))
+        expected_expansion = gojax.decode_states("""
+                                                    B _ _
+                                                    _ _ _
+                                                    _ _ _
+
+                                                    _ _ B
+                                                    _ _ _
+                                                    _ _ _
+                                                    """, turn=gojax.WHITES_TURN)
+        np.testing.assert_array_equal(
+            expanded_states, jnp.expand_dims(expected_expansion, 0))
+
     def test_get_children(self):
         action_size = 10
         board_size = 3
         batch_size = 1
         states = gojax.new_states(board_size, batch_size)
         children = gojax.get_children(states)
-        chex.assert_shape(children, (batch_size, action_size, gojax.NUM_CHANNELS, board_size, board_size))
-        expected_children = serialize.decode_states("""
+        chex.assert_shape(children, (batch_size, action_size,
+                          gojax.NUM_CHANNELS, board_size, board_size))
+        expected_children = gojax.decode_states("""
                                                   B _ _
                                                   _ _ _
                                                   _ _ _
@@ -578,7 +636,8 @@ class GoTestCase(chex.TestCase):
                                                   PASS=T
                                                     """, turn=gojax.WHITES_TURN)
 
-        np.testing.assert_array_equal(children, jnp.expand_dims(expected_children, 0))
+        np.testing.assert_array_equal(
+            children, jnp.expand_dims(expected_children, 0))
 
     def test_get_children_batches(self):
         """Test get_children works with two states."""
@@ -587,8 +646,9 @@ class GoTestCase(chex.TestCase):
         batch_size = 2
         states = gojax.new_states(board_size, batch_size)
         children = gojax.get_children(states)
-        chex.assert_shape(children, (batch_size, action_size, gojax.NUM_CHANNELS, board_size, board_size))
-        expected_children = serialize.decode_states("""
+        chex.assert_shape(children, (batch_size, action_size,
+                          gojax.NUM_CHANNELS, board_size, board_size))
+        expected_children = gojax.decode_states("""
                                                   B _ _
                                                   _ _ _
                                                   _ _ _
@@ -630,7 +690,8 @@ class GoTestCase(chex.TestCase):
                                                   _ _ _
                                                   PASS=T
                                                     """, turn=gojax.WHITES_TURN)
-        expected_children = jnp.repeat(jnp.expand_dims(expected_children, 0), batch_size, axis=0)
+        expected_children = jnp.repeat(jnp.expand_dims(
+            expected_children, 0), batch_size, axis=0)
         np.testing.assert_array_equal(children, expected_children)
 
 

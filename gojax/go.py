@@ -6,6 +6,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import lax
+import chex
 
 from gojax import constants
 from gojax import state_index
@@ -19,7 +20,8 @@ def new_states(board_size: int, batch_size: int = 1) -> jnp.ndarray:
     :param batch_size: batch size (N).
     :return: An N x 6 x B x B JAX zero-array of representing new Go games.
     """
-    state = jnp.zeros((batch_size, constants.NUM_CHANNELS, board_size, board_size), dtype=bool)
+    state = jnp.zeros((batch_size, constants.NUM_CHANNELS,
+                      board_size, board_size), dtype=bool)
     return state
 
 
@@ -39,7 +41,8 @@ def paint_fill(seeds: jnp.ndarray, areas: jnp.ndarray) -> jnp.ndarray:
     float_seeds = seeds.astype('bfloat16')
     float_areas = areas.astype('bfloat16')
     second_expansion = lax.min(
-        lax.conv(float_seeds, constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1), padding='same'),
+        lax.conv(float_seeds, constants.CARDINALLY_CONNECTED_KERNEL,
+                 window_strides=(1, 1), padding='same'),
         float_areas)
 
     def _last_expansion_no_change(last_two_expansions_):
@@ -50,10 +53,12 @@ def paint_fill(seeds: jnp.ndarray, areas: jnp.ndarray) -> jnp.ndarray:
             lax.conv(last_two_expansions_[1], constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1),
                      padding='same'), float_areas)
         expanded = lax.min(
-            lax.conv(expanded, constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1), padding='same'),
+            lax.conv(expanded, constants.CARDINALLY_CONNECTED_KERNEL,
+                     window_strides=(1, 1), padding='same'),
             float_areas)
         expanded = lax.min(
-            lax.conv(expanded, constants.CARDINALLY_CONNECTED_KERNEL, window_strides=(1, 1), padding='same'),
+            lax.conv(expanded, constants.CARDINALLY_CONNECTED_KERNEL,
+                     window_strides=(1, 1), padding='same'),
             float_areas)
         return last_two_expansions_[1], expanded
 
@@ -70,8 +75,11 @@ def compute_free_groups(states: jnp.ndarray, turns: jnp.ndarray) -> jnp.ndarray:
     :param turns: a boolean array of length N.
     :return: an N x B x B boolean array.
     """
-    float_pieces = jnp.expand_dims(state_index.get_pieces_per_turn(states, turns), 1).astype('bfloat16')
-    float_empty_spaces = state_index.get_empty_spaces(states, keepdims=True).astype('bfloat16')  # N x 1 x B x B array.
+    float_pieces = jnp.expand_dims(
+        state_index.get_pieces_per_turn(states, turns), 1).astype('bfloat16')
+    # N x 1 x B x B array.
+    float_empty_spaces = state_index.get_empty_spaces(
+        states, keepdims=True).astype('bfloat16')
     immediate_free_pieces = lax.min(
         lax.conv(float_empty_spaces, constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding='same'), float_pieces)
 
@@ -94,19 +102,26 @@ def compute_areas(states: jnp.ndarray) -> jnp.ndarray:
     """
     black_pieces = states[:, constants.BLACK_CHANNEL_INDEX].astype('bfloat16')
     white_pieces = states[:, constants.WHITE_CHANNEL_INDEX].astype('bfloat16')
-    empty_spaces = state_index.get_empty_spaces(states, keepdims=True).astype('bfloat16')
+    empty_spaces = state_index.get_empty_spaces(
+        states, keepdims=True).astype('bfloat16')
 
     immediately_connected_to_black_pieces = lax.min(
-        lax.conv(jnp.expand_dims(black_pieces, 1), constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding="same"),
+        lax.conv(jnp.expand_dims(black_pieces, 1),
+                 constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding="same"),
         empty_spaces)
     immediately_connected_to_white_pieces = lax.min(
-        lax.conv(jnp.expand_dims(white_pieces, 1), constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding="same"),
+        lax.conv(jnp.expand_dims(white_pieces, 1),
+                 constants.CARDINALLY_CONNECTED_KERNEL, (1, 1), padding="same"),
         empty_spaces)
-    connected_to_black_pieces = paint_fill(immediately_connected_to_black_pieces, empty_spaces)
-    connected_to_white_pieces = paint_fill(immediately_connected_to_white_pieces, empty_spaces)
+    connected_to_black_pieces = paint_fill(
+        immediately_connected_to_black_pieces, empty_spaces)
+    connected_to_white_pieces = paint_fill(
+        immediately_connected_to_white_pieces, empty_spaces)
 
-    connected_to_pieces = jnp.concatenate((connected_to_black_pieces, connected_to_white_pieces), 1).astype(bool)
-    pieces = states[:, (constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX)]
+    connected_to_pieces = jnp.concatenate(
+        (connected_to_black_pieces, connected_to_white_pieces), 1).astype(bool)
+    pieces = states[:, (constants.BLACK_CHANNEL_INDEX,
+                        constants.WHITE_CHANNEL_INDEX)]
     return jnp.logical_or(jnp.logical_and(connected_to_pieces, ~connected_to_pieces[:, ::-1]), pieces)
 
 
@@ -136,7 +151,7 @@ def compute_winning(states: jnp.ndarray) -> jnp.ndarray:
 
 
 def compute_indicator_actions_are_invalid(states: jnp.ndarray, indicator_actions: jnp.ndarray) -> Tuple[
-    jnp.ndarray, jnp.ndarray]:
+        jnp.ndarray, jnp.ndarray]:
     """
     Computes whether the given actions are valid for each state.
 
@@ -173,14 +188,15 @@ def compute_indicator_actions_are_invalid(states: jnp.ndarray, indicator_actions
     num_casualties = jnp.sum(previously_killed_pieces, axis=(1, 2))
     num_ghost_kills = jnp.sum(ghost_killed, axis=(1, 2))
     komi = (num_ghost_kills == 1) & jnp.sum(previously_killed_pieces & indicator_actions, axis=(1, 2)) & (
-            num_casualties == 1)
+        num_casualties == 1)
     occupied = jnp.sum(jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]], axis=1,
                                dtype=bool) & indicator_actions, axis=(1, 2))
     no_liberties = jnp.sum(jnp.logical_xor(compute_free_groups(piece_added_and_opponents_removed, turns),
                                            state_index.get_pieces_per_turn(piece_added_and_opponents_removed, turns)),
                            axis=(1, 2), dtype=bool)
 
-    partial_next_states = piece_added_and_opponents_removed.at[:, constants.KILLED_CHANNEL_INDEX].set(ghost_killed)
+    partial_next_states = piece_added_and_opponents_removed.at[:, constants.KILLED_CHANNEL_INDEX].set(
+        ghost_killed)
     return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi), partial_next_states
 
 
@@ -222,13 +238,15 @@ def compute_actions1d_are_invalid(states: jnp.ndarray, actions_1d: jnp.ndarray) 
     previously_killed_pieces = states[:, constants.KILLED_CHANNEL_INDEX]
     num_casualties = jnp.sum(previously_killed_pieces, axis=(1, 2))
     num_ghost_kills = jnp.sum(ghost_killed, axis=(1, 2))
-    komi = (num_ghost_kills == 1) & previously_killed_pieces[n_indices, rows, cols] & ~passed & (num_casualties == 1)
+    komi = (num_ghost_kills == 1) & previously_killed_pieces[n_indices, rows, cols] & ~passed & (
+        num_casualties == 1)
     occupied = jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]], axis=1, dtype=bool)[
-                   n_indices, rows, cols] & ~passed
+        n_indices, rows, cols] & ~passed
     no_liberties = jnp.sum(jnp.logical_xor(compute_free_groups(piece_added_and_opponents_removed, turns),
                                            state_index.get_pieces_per_turn(piece_added_and_opponents_removed, turns)),
                            axis=(1, 2), dtype=bool)
-    partial_next_states = piece_added_and_opponents_removed.at[:, constants.KILLED_CHANNEL_INDEX].set(ghost_killed)
+    partial_next_states = piece_added_and_opponents_removed.at[:, constants.KILLED_CHANNEL_INDEX].set(
+        ghost_killed)
     return jnp.logical_or(jnp.logical_or(occupied, no_liberties), komi), partial_next_states
 
 
@@ -256,14 +274,18 @@ def next_states_legacy(states: jnp.ndarray, indicator_actions: jnp.ndarray) -> j
     then it's considered a pass.
     :return: an N x C x B x B boolean array.
     """
-    invalid_actions, partial_next_states = compute_indicator_actions_are_invalid(states, indicator_actions)
+    invalid_actions, partial_next_states = compute_indicator_actions_are_invalid(
+        states, indicator_actions)
 
     # Set turn, pass, and end channels.
     partial_next_states = change_turns(partial_next_states)
-    previously_passed = jnp.alltrue(partial_next_states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
+    previously_passed = jnp.alltrue(
+        partial_next_states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
     passed = jnp.alltrue(~indicator_actions, axis=(1, 2), keepdims=True)
-    partial_next_states = partial_next_states.at[:, constants.PASS_CHANNEL_INDEX].set(passed)
-    next_states_ = partial_next_states.at[:, constants.END_CHANNEL_INDEX].set(previously_passed & passed)
+    partial_next_states = partial_next_states.at[:, constants.PASS_CHANNEL_INDEX].set(
+        passed)
+    next_states_ = partial_next_states.at[:, constants.END_CHANNEL_INDEX].set(
+        previously_passed & passed)
 
     # If the action is invalid or the game ended, set the move to pass, otherwise return what
     # would be the next state.
@@ -279,23 +301,58 @@ def next_states(states: jnp.ndarray, actions_1d: jnp.ndarray) -> jnp.ndarray:
     :param actions_1d: An array of N integers in range [0, B^2].
     :return: an N x C x B x B boolean array.
     """
-    invalid_actions, partial_next_states = compute_actions1d_are_invalid(states, actions_1d)
+    invalid_actions, partial_next_states = compute_actions1d_are_invalid(
+        states, actions_1d)
 
     # Set turn, pass, and end channels.
     partial_next_states = change_turns(partial_next_states)
-    previously_passed = jnp.alltrue(partial_next_states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
+    previously_passed = jnp.alltrue(
+        partial_next_states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
     passed = jnp.expand_dims(actions_1d == np.prod(states.shape[-2:]), (1, 2))
-    partial_next_states = partial_next_states.at[:, constants.PASS_CHANNEL_INDEX].set(passed)
-    next_states_ = partial_next_states.at[:, constants.END_CHANNEL_INDEX].set(previously_passed & passed)
+    partial_next_states = partial_next_states.at[:, constants.PASS_CHANNEL_INDEX].set(
+        passed)
+    next_states_ = partial_next_states.at[:, constants.END_CHANNEL_INDEX].set(
+        previously_passed & passed)
 
     # If the action is invalid or the game ended, set the move to pass and clear the killed layer, otherwise return what
     # would be the next state.
-    ended = jnp.alltrue(states[:, constants.END_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
+    ended = jnp.alltrue(
+        states[:, constants.END_CHANNEL_INDEX], axis=(1, 2), keepdims=True)
     passed_state = change_turns(states).at[:, constants.PASS_CHANNEL_INDEX].set(True).at[:,
-                   constants.KILLED_CHANNEL_INDEX].set(False).at[:, constants.END_CHANNEL_INDEX].set(
+                                                                                         constants.KILLED_CHANNEL_INDEX].set(False).at[:, constants.END_CHANNEL_INDEX].set(
         previously_passed | ended)
     return jnp.where(jnp.expand_dims(invalid_actions | state_index.get_ended(states), (1, 2, 3)), passed_state,
                      next_states_)
+
+
+def expand_states(states: jnp.ndarray, multi_actions_1d: jnp.ndarray) -> jnp.ndarray:
+    """
+    Expands the set of next states for every state.
+
+    Invalid moves equate to passes.
+
+    :param states: an N x C x B x B boolean array.
+    :param multi_actions_1d: an N x A' integer array in range [0, B^2].
+    :return: an N x A' x C x B x B boolean array.
+    """
+    chex.assert_rank(states, 4)
+    chex.assert_rank(multi_actions_1d, 2)
+
+    batch_size = len(states)
+    partial_action_size = multi_actions_1d.shape[1]
+    states = jnp.repeat(jnp.expand_dims(states, axis=1),
+                        partial_action_size, axis=1)
+    state_shape = states.shape[-3:]
+    flattened_states = jnp.reshape(
+        states, (batch_size * partial_action_size, *state_shape))
+    flattened_all_actions_1d = jnp.reshape(
+        multi_actions_1d, batch_size * partial_action_size)
+    flattened_children = next_states(
+        flattened_states, flattened_all_actions_1d)
+    expanded_states = jnp.reshape(
+        flattened_children, (batch_size, partial_action_size, *state_shape))
+    chex.assert_rank(expanded_states, 5)
+    return expanded_states
 
 
 def get_children(states: jnp.ndarray) -> jnp.ndarray:
@@ -307,16 +364,14 @@ def get_children(states: jnp.ndarray) -> jnp.ndarray:
     :param states: an N x C x B x B boolean array.
     :return: an N x A x C x B x B boolean array.
     """
+    chex.assert_rank(states, 4)
+
     batch_size = len(states)
     action_size = state_index.get_action_size(states)
     all_actions_1d = jnp.arange(action_size)
-    all_actions_1d = jnp.repeat(jnp.expand_dims(all_actions_1d, axis=0), batch_size, axis=0)
-    states = jnp.repeat(jnp.expand_dims(states, axis=1), action_size, axis=1)
-    state_shape = states.shape[-3:]
-    flattened_states = jnp.reshape(states, (batch_size * action_size, *state_shape))
-    flattened_all_actions_1d = jnp.reshape(all_actions_1d, batch_size * action_size)
-    flattened_children = next_states(flattened_states, flattened_all_actions_1d)
-    return jnp.reshape(flattened_children, (batch_size, action_size, *state_shape))
+    all_actions_1d = jnp.repeat(jnp.expand_dims(
+        all_actions_1d, axis=0), batch_size, axis=0)
+    return expand_states(states, all_actions_1d)
 
 
 def change_turns(states: jnp.ndarray) -> jnp.ndarray:

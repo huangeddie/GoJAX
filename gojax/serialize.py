@@ -16,11 +16,14 @@ def _decode_single_state(encode_str, ended, passed, turn):
     for i, line in enumerate(lines):
         for j, char in enumerate(line.split()):
             if char == 'B':
-                states = states.at[0, gojax.BLACK_CHANNEL_INDEX, i, j].set(True)
+                states = states.at[0, gojax.BLACK_CHANNEL_INDEX, i,
+                                   j].set(True)
             elif char == 'W':
-                states = states.at[0, gojax.WHITE_CHANNEL_INDEX, i, j].set(True)
+                states = states.at[0, gojax.WHITE_CHANNEL_INDEX, i,
+                                   j].set(True)
             elif char == 'X':
-                states = states.at[0, gojax.KILLED_CHANNEL_INDEX, i, j].set(True)
+                states = states.at[0, gojax.KILLED_CHANNEL_INDEX, i,
+                                   j].set(True)
         if i == board_size:
             # Extract metadata.
             for key_value in line.split(';'):
@@ -54,7 +57,10 @@ def _decode_single_state(encode_str, ended, passed, turn):
     return states
 
 
-def decode_states(serialized_states: str, turn: bool = gojax.BLACKS_TURN, passed: bool = False, ended: bool = False):
+def decode_states(serialized_states: str,
+                  turn: bool = gojax.BLACKS_TURN,
+                  passed: bool = False,
+                  ended: bool = False):
     """
     Creates game boards from a human-readable serialzied string.
 
@@ -83,7 +89,8 @@ def decode_states(serialized_states: str, turn: bool = gojax.BLACKS_TURN, passed
     serialized_states = textwrap.dedent(serialized_states)
     states = []
     for serialized_state in serialized_states.split('\n\n'):
-        states.append(_decode_single_state(serialized_state, ended, passed, turn))
+        states.append(
+            _decode_single_state(serialized_state, ended, passed, turn))
 
     return jnp.concatenate(states)
 

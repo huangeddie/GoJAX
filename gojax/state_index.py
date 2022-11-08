@@ -84,8 +84,12 @@ def get_empty_spaces(states, keepdims=False):
     :param keepdims: Whether to keep the Go state channel dimension.
     :return: an N x B x B boolean array or N x 1 x B x B boolean array.
     """
-    return ~jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
-                    axis=1, dtype=bool, keepdims=keepdims)
+    return ~jnp.sum(
+        states[:,
+               [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
+        axis=1,
+        dtype=bool,
+        keepdims=keepdims)
 
 
 def get_occupied_spaces(states):
@@ -95,8 +99,11 @@ def get_occupied_spaces(states):
     :param states: a batch array of N Go games.
     :return: an N x B x B boolean array.
     """
-    return jnp.sum(states[:, [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
-                   axis=1, dtype=bool)
+    return jnp.sum(
+        states[:,
+               [constants.BLACK_CHANNEL_INDEX, constants.WHITE_CHANNEL_INDEX]],
+        axis=1,
+        dtype=bool)
 
 
 def at_pieces_per_turn(states, turns):
@@ -124,12 +131,14 @@ def at_location_per_turn(states, turns, row, col):
     :param col: integer column index.
     :return: a scalar update reference.
     """
-    return states.at[jnp.arange(states.shape[0]), turns.astype('uint8'), jnp.full(states.shape[0],
-                                                                                  row), jnp.full(
-        states.shape[0], col)]
+    return states.at[jnp.arange(states.shape[0]),
+                     turns.astype('uint8'),
+                     jnp.full(states.shape[0], row),
+                     jnp.full(states.shape[0], col)]
 
 
-def action_2d_to_indicator(actions_2d: Union[jnp.ndarray, list], states: jnp.ndarray):
+def action_2d_to_indicator(actions_2d: Union[jnp.ndarray, list],
+                           states: jnp.ndarray):
     """
     Converts an array of action 2D indices into their sparse indicator array form.
 
@@ -139,11 +148,13 @@ def action_2d_to_indicator(actions_2d: Union[jnp.ndarray, list], states: jnp.nda
     :param states: a batch array of N Go games.
     :return: a (N x B x B) sparse array representing indicator actions for each state.
     """
-    indicator_actions = jnp.zeros((states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
+    indicator_actions = jnp.zeros(
+        (states.shape[0], states.shape[2], states.shape[3]), dtype=bool)
     for i, action in enumerate(actions_2d):
         if action is None:
             continue
-        indicator_actions = indicator_actions.at[i, action[0], action[1]].set(True)
+        indicator_actions = indicator_actions.at[i, action[0],
+                                                 action[1]].set(True)
     return indicator_actions
 
 
@@ -160,7 +171,8 @@ def action_1d_to_indicator(actions_1d: jnp.ndarray, nrows: int, ncols: int):
     """
     batch_size = len(actions_1d)
     indicator_actions = jnp.zeros((batch_size, nrows * ncols + 1), dtype=bool)
-    indicator_actions = indicator_actions.at[jnp.arange(batch_size), actions_1d].set(True)
+    indicator_actions = indicator_actions.at[jnp.arange(batch_size),
+                                             actions_1d].set(True)
     return jnp.reshape(indicator_actions[:, :-1], (batch_size, nrows, ncols))
 
 
@@ -173,7 +185,8 @@ def action_indicator_to_1d(indicator_actions: jnp.ndarray):
     :return: an integer array of length N.
     """
     passes = ~jnp.sum(indicator_actions, axis=(1, 2), dtype=bool)
-    one_hot_actions = jnp.concatenate(
-        (jnp.reshape(indicator_actions, (len(indicator_actions), -1)), jnp.expand_dims(passes, 1)),
-        axis=1)
+    one_hot_actions = jnp.concatenate((jnp.reshape(
+        indicator_actions,
+        (len(indicator_actions), -1)), jnp.expand_dims(passes, 1)),
+                                      axis=1)
     return jnp.argmax(one_hot_actions, axis=1)

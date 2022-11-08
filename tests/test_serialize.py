@@ -1,3 +1,5 @@
+"""Tests serialize.py"""
+# pylint: disable=missing-function-docstring,missing-class-docstring,too-many-public-methods,duplicate-code
 import unittest
 
 import jax.numpy as jnp
@@ -7,6 +9,7 @@ import gojax
 
 
 class DecodeStatesTestCase(unittest.TestCase):
+
     def test_shape(self):
         state_str = """
                     _ _ _ _
@@ -25,8 +28,8 @@ class DecodeStatesTestCase(unittest.TestCase):
                                    _ _
                                    _ _
                                    """)
-        np.testing.assert_array_equal(
-            states, jnp.zeros((2, gojax.NUM_CHANNELS, 2, 2)))
+        np.testing.assert_array_equal(states,
+                                      jnp.zeros((2, gojax.NUM_CHANNELS, 2, 2)))
 
     def test_multi_states_with_macro(self):
         states = gojax.decode_states("""
@@ -91,8 +94,9 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = gojax.decode_states(state_str, gojax.WHITES_TURN)
-        np.testing.assert_array_equal(state[0, gojax.TURN_CHANNEL_INDEX],
-                                      jnp.ones_like(state[0, gojax.TURN_CHANNEL_INDEX]))
+        np.testing.assert_array_equal(
+            state[0, gojax.TURN_CHANNEL_INDEX],
+            jnp.ones_like(state[0, gojax.TURN_CHANNEL_INDEX]))
 
     def test_one_piece(self):
         state_str = """
@@ -123,8 +127,9 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = gojax.decode_states(state_str)
-        np.testing.assert_array_equal(state[0, gojax.PASS_CHANNEL_INDEX],
-                                      jnp.zeros_like(state[0, gojax.PASS_CHANNEL_INDEX]))
+        np.testing.assert_array_equal(
+            state[0, gojax.PASS_CHANNEL_INDEX],
+            jnp.zeros_like(state[0, gojax.PASS_CHANNEL_INDEX]))
 
     def test_pass(self):
         state_str = """
@@ -134,8 +139,9 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = gojax.decode_states(state_str, passed=True)
-        np.testing.assert_array_equal(state[0, gojax.PASS_CHANNEL_INDEX],
-                                      jnp.ones_like(state[0, gojax.PASS_CHANNEL_INDEX]))
+        np.testing.assert_array_equal(
+            state[0, gojax.PASS_CHANNEL_INDEX],
+            jnp.ones_like(state[0, gojax.PASS_CHANNEL_INDEX]))
 
     def test_ended_default_false(self):
         state_str = """
@@ -145,8 +151,9 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = gojax.decode_states(state_str)
-        np.testing.assert_array_equal(state[0, gojax.END_CHANNEL_INDEX],
-                                      jnp.zeros_like(state[0, gojax.END_CHANNEL_INDEX]))
+        np.testing.assert_array_equal(
+            state[0, gojax.END_CHANNEL_INDEX],
+            jnp.zeros_like(state[0, gojax.END_CHANNEL_INDEX]))
 
     def test_ended(self):
         state_str = """
@@ -156,8 +163,9 @@ class DecodeStatesTestCase(unittest.TestCase):
                     _ _ _ _
                     """
         state = gojax.decode_states(state_str, ended=True)
-        np.testing.assert_array_equal(state[0, gojax.END_CHANNEL_INDEX],
-                                      jnp.ones_like(state[0, gojax.END_CHANNEL_INDEX]))
+        np.testing.assert_array_equal(
+            state[0, gojax.END_CHANNEL_INDEX],
+            jnp.ones_like(state[0, gojax.END_CHANNEL_INDEX]))
 
 
 class EncodeStatesTestCase(unittest.TestCase):
@@ -188,9 +196,10 @@ class EncodeStatesTestCase(unittest.TestCase):
                                     _ W _
                                     _ _ _
                                     """)
-        self.assertEqual(gojax.encode_states(states),
-                         "_ _ _ \n_ _ _ \n_ _ _ \n\n_ _ _ \n_ B _ \n_ _ _ \nTURN=W;PASS=T;END=T\n\n"
-                         "_ _ _ \n_ W _ \n_ _ _ \n")
+        self.assertEqual(
+            gojax.encode_states(states),
+            "_ _ _ \n_ _ _ \n_ _ _ \n\n_ _ _ \n_ B _ \n_ _ _ \nTURN=W;PASS=T;END=T\n\n"
+            "_ _ _ \n_ W _ \n_ _ _ \n")
 
 
 if __name__ == '__main__':

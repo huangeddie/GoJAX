@@ -141,9 +141,9 @@ def get_string(state):
         for j in range(size):
             # First character
             if state[gojax.BLACK_CHANNEL_INDEX, i, j]:
-                board_str += '○'
-            elif state[gojax.WHITE_CHANNEL_INDEX, i, j]:
                 board_str += '●'
+            elif state[gojax.WHITE_CHANNEL_INDEX, i, j]:
+                board_str += '○'
             elif state[gojax.KILLED_CHANNEL_INDEX, i, j]:
                 board_str += 'x'
             else:

@@ -369,8 +369,8 @@ class GoTestCase(chex.TestCase):
         state = gojax.decode_states(state_str)
         expected_str = textwrap.dedent("""\
         \tA B C D 
-        0	○═╤═╤═╗
-        1	╟─●─┼─╢
+        0	●═╤═╤═╗
+        1	╟─○─┼─╢
         2	╟─┼─┼─╢
         3	╚═╧═╧═╝
         \tTurn: BLACK, Game State: ONGOING

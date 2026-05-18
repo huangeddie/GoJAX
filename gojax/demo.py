@@ -6,7 +6,7 @@ import gojax
 
 if __name__ == '__main__':
     state = gojax.new_states(7)
-    while not jnp.alltrue(state[0, gojax.END_CHANNEL_INDEX]):
+    while not jnp.all(state[0, gojax.END_CHANNEL_INDEX]):
         print(gojax.get_string(state[0]))
         USER_INPUT = input('row col: ').strip()
         # pylint: disable=invalid-name

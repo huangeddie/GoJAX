@@ -41,7 +41,7 @@ def get_turns(states):
     :return: a boolean array of length N indicating whose turn it is for each state.
     """
 
-    return jnp.alltrue(states[:, constants.TURN_CHANNEL_INDEX], axis=(1, 2))
+    return jnp.all(states[:, constants.TURN_CHANNEL_INDEX], axis=(1, 2))
 
 
 def get_killed(states):
@@ -63,7 +63,7 @@ def get_passes(states):
     :return: a boolean array of length N indicating which state was passed.
     """
 
-    return jnp.alltrue(states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2))
+    return jnp.all(states[:, constants.PASS_CHANNEL_INDEX], axis=(1, 2))
 
 
 def get_ended(states):
@@ -73,7 +73,7 @@ def get_ended(states):
     :param states: a batch array of N Go games.
     :return: a boolean array of length N indicating which state ended.
     """
-    return jnp.alltrue(states[:, constants.END_CHANNEL_INDEX], axis=(1, 2))
+    return jnp.all(states[:, constants.END_CHANNEL_INDEX], axis=(1, 2))
 
 
 def get_empty_spaces(states, keepdims=False):

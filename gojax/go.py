@@ -326,11 +326,11 @@ def next_states_legacy(states: jnp.ndarray,
 
     # Set turn, pass, and end channels.
     partial_next_states = change_turns(partial_next_states)
-    previously_passed = jnp.alltrue(
+    previously_passed = jnp.all(
         partial_next_states[:, constants.PASS_CHANNEL_INDEX],
         axis=(1, 2),
         keepdims=True)
-    passed = jnp.alltrue(~indicator_actions, axis=(1, 2), keepdims=True)
+    passed = jnp.all(~indicator_actions, axis=(1, 2), keepdims=True)
     partial_next_states = partial_next_states.at[:, constants.
                                                  PASS_CHANNEL_INDEX].set(
                                                      passed)
@@ -359,7 +359,7 @@ def next_states(states: jnp.ndarray, actions_1d: jnp.ndarray) -> jnp.ndarray:
 
     # Set turn, pass, and end channels.
     partial_next_states = change_turns(partial_next_states)
-    previously_passed = jnp.alltrue(
+    previously_passed = jnp.all(
         partial_next_states[:, constants.PASS_CHANNEL_INDEX],
         axis=(1, 2),
         keepdims=True)
@@ -372,7 +372,7 @@ def next_states(states: jnp.ndarray, actions_1d: jnp.ndarray) -> jnp.ndarray:
 
     # If the action is invalid or the game ended, set the move to pass and clear
     # the killed layer, otherwise return what would be the next state.
-    ended = jnp.alltrue(states[:, constants.END_CHANNEL_INDEX],
+    ended = jnp.all(states[:, constants.END_CHANNEL_INDEX],
                         axis=(1, 2),
                         keepdims=True)
     passed_state = change_turns(

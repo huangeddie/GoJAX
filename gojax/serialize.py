@@ -158,9 +158,9 @@ def get_string(state):
         board_str += '\n'
 
     areas = gojax.compute_area_sizes(jnp.expand_dims(state, 0))
-    done = jnp.alltrue(state[gojax.END_CHANNEL_INDEX])
-    previous_player_passed = jnp.alltrue(state[gojax.PASS_CHANNEL_INDEX])
-    turn = jnp.alltrue(state[gojax.TURN_CHANNEL_INDEX])
+    done = jnp.all(state[gojax.END_CHANNEL_INDEX])
+    previous_player_passed = jnp.all(state[gojax.PASS_CHANNEL_INDEX])
+    turn = jnp.all(state[gojax.TURN_CHANNEL_INDEX])
     if done:
         game_state = 'END'
     elif previous_player_passed:
@@ -190,9 +190,9 @@ def _encode_single_state(state: jnp.ndarray) -> str:
             board_str += ' '
         board_str += '\n'
 
-    done = jnp.alltrue(state[gojax.END_CHANNEL_INDEX])
-    previous_player_passed = jnp.alltrue(state[gojax.PASS_CHANNEL_INDEX])
-    turn = jnp.alltrue(state[gojax.TURN_CHANNEL_INDEX])
+    done = jnp.all(state[gojax.END_CHANNEL_INDEX])
+    previous_player_passed = jnp.all(state[gojax.PASS_CHANNEL_INDEX])
+    turn = jnp.all(state[gojax.TURN_CHANNEL_INDEX])
     macros = []
     if turn:
         macros.append('TURN=W')
